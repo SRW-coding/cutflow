@@ -45,6 +45,23 @@ function getApiRoot(): string {
   return base.replace(/\/$/, '');
 }
 
+function getBackendOrigin(): string {
+  // If API base is `http://localhost:8000/api`, origin should be `http://localhost:8000`.
+  // If API base is `http://localhost/cutflow-api/public/api`, origin should be
+  // `http://localhost/cutflow-api/public` (where Laravel public assets are served).
+  const apiRoot = getApiRoot();
+  return apiRoot.endsWith('/api') ? apiRoot.slice(0, -'/api'.length) : apiRoot;
+}
+
+function normalizeAssetUrl(assetUrl: string): string {
+  if (!assetUrl) return assetUrl;
+  if (assetUrl.startsWith('http://') || assetUrl.startsWith('https://')) return assetUrl;
+
+  const origin = getBackendOrigin();
+  if (assetUrl.startsWith('/')) return `${origin}${assetUrl}`;
+  return `${origin}/${assetUrl}`;
+}
+
 /**
  * GET /brolls/library — nested categories with subcategories and asset URLs.
  */
@@ -87,7 +104,18 @@ export async function fetchBrollLibrary(): Promise<BrollCategory[]> {
     throw new BrollApiError('parse', 'B-roll library data is not an array.');
   }
 
-  return data as BrollCategory[];
+  // Normalize possibly-relative asset URLs into absolute URLs for <video src> / fetch()
+  const categories = data as BrollCategory[];
+  return categories.map((cat) => ({
+    ...cat,
+    subcategories: (cat.subcategories ?? []).map((sub) => ({
+      ...sub,
+      items: (sub.items ?? []).map((it) => ({
+        ...it,
+        url: normalizeAssetUrl(it.url),
+      })),
+    })),
+  }));
 }
 
 export function suggestedFileNameForBroll(name: string, assetUrl: string): string {
