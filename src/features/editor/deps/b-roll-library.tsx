@@ -401,23 +401,12 @@ function BrollTile({
   return (
     <div className="group relative flex flex-col rounded-md border border-border bg-secondary/20 overflow-hidden">
       <div className="relative aspect-video bg-muted">
-        {item.type === 'video' ? (
-          <video
-            className="h-full w-full object-cover"
-            src={item.url}
-            muted
-            playsInline
-            preload="metadata"
-            aria-label={item.name}
-          />
-        ) : (
-          <img
-            src={item.url}
-            alt=""
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
-        )}
+        <img
+          src={item.thumbnail_url || item.url}
+          alt=""
+          className="h-full w-full object-cover"
+          loading="lazy"
+        />
         {item.is_premium && (
           <span className="absolute top-1 right-1 rounded bg-amber-500/90 px-1 py-0.5 text-[8px] font-semibold text-black">
             Pro

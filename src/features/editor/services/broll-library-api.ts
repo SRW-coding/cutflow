@@ -7,6 +7,7 @@ export interface BrollLibraryItem {
   name: string;
   description: string | null;
   url: string;
+  thumbnail_url?: string | null;
   type: 'image' | 'video';
   is_premium: boolean;
 }
@@ -113,6 +114,7 @@ export async function fetchBrollLibrary(): Promise<BrollCategory[]> {
       items: (sub.items ?? []).map((it) => ({
         ...it,
         url: normalizeAssetUrl(it.url),
+        thumbnail_url: it.thumbnail_url ? normalizeAssetUrl(it.thumbnail_url) : null,
       })),
     })),
   }));
