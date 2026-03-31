@@ -1,16 +1,19 @@
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
   ChevronRight,
   Clapperboard,
   Loader2,
   Plus,
+  Search,
+  X,
 } from 'lucide-react';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/shared/ui/cn';
 import { createLogger } from '@/shared/logging/logger';
 import {
@@ -59,6 +62,7 @@ export const BRollLibrary = memo(function BRollLibrary() {
   const [loadState, setLoadState] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
   const [loadError, setLoadError] = useState<string | null>(null);
   const [addingKey, setAddingKey] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -87,6 +91,40 @@ export const BRollLibrary = memo(function BRollLibrary() {
       cancelled = true;
     };
   }, []);
+
+  const filteredCategories = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return categories;
+
+    const matches = (s: string | null | undefined) => (s ?? '').toLowerCase().includes(q);
+
+    return categories
+      .map((cat) => {
+        const catMatch = matches(cat.name);
+        const subcategories = (cat.subcategories ?? [])
+          .map((sub) => {
+            const subMatch = matches(sub.name);
+            const items = (sub.items ?? []).filter(
+              (it) => subMatch || catMatch || matches(it.name) || matches(it.description)
+            );
+            return { ...sub, items };
+          })
+          .filter((sub) => (sub.items ?? []).length > 0);
+
+        return { ...cat, subcategories };
+      })
+      .filter((cat) => (cat.subcategories ?? []).length > 0);
+  }, [categories, query]);
+
+  const filteredCount = useMemo(() => {
+    let count = 0;
+    for (const cat of filteredCategories) {
+      for (const sub of cat.subcategories ?? []) {
+        count += (sub.items ?? []).length;
+      }
+    }
+    return count;
+  }, [filteredCategories]);
 
   const handleAddItem = useCallback(
     (item: BrollLibraryItem) => {
@@ -226,7 +264,37 @@ export const BRollLibrary = memo(function BRollLibrary() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-y-auto p-2">
-      {categories.map((cat) => (
+      <div className="sticky top-0 z-10 -mx-2 mb-2 bg-background/80 px-2 pb-2 pt-2 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search b-roll…"
+            className="h-9 pl-9 pr-9 text-sm"
+            aria-label="Search b-roll"
+          />
+          {query.trim().length > 0 && (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+              aria-label="Clear search"
+              title="Clear"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        {query.trim().length > 0 && (
+          <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
+            <span>{filteredCount} result{filteredCount === 1 ? '' : 's'}</span>
+            {filteredCount === 0 && <span>No matches</span>}
+          </div>
+        )}
+      </div>
+
+      {filteredCategories.map((cat) => (
         <CategoryBlock
           key={cat.id}
           category={cat}
