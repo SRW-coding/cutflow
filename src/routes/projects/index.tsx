@@ -247,22 +247,7 @@ function ProjectsIndex() {
               <FreeCutLogo variant="full" size="md" className="hover:opacity-80 transition-opacity" />
             </Link>
             <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-10 w-10"
-                asChild
-              >
-                <a
-                  href="https://github.com/walterlow/freecut"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  data-tooltip="View on GitHub"
-                  data-tooltip-side="left"
-                >
-                  <Github className="w-5 h-5" />
-                </a>
-              </Button>
+            
               <Button variant="outline" size="lg" className="gap-2" onClick={handleImportClick}>
                 <Upload className="w-4 h-4" />
                 Import Project

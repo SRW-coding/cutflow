@@ -28,6 +28,7 @@ import {
   DEFAULT_WHISPER_QUANTIZATION,
   normalizeWhisperLanguage,
 } from '@/shared/utils/whisper-settings';
+import { isTranscriptionEnabled } from '@/shared/utils/transcription-feature';
 
 const logger = createLogger('MediaTranscriptionService');
 const DEFAULT_MODEL: MediaTranscriptModel = DEFAULT_WHISPER_MODEL;
@@ -58,6 +59,10 @@ class MediaTranscriptionService {
     mediaId: string,
     options: Pick<TranscribeOptions, 'language' | 'model' | 'quantization' | 'onProgress'> = {},
   ): Promise<MediaTranscript> {
+    if (!isTranscriptionEnabled) {
+      throw new Error('Transcription is disabled (VITE_ENABLE_TRANSCRIPTION=false)');
+    }
+
     const media = await mediaLibraryService.getMedia(mediaId);
     if (!media) {
       throw new Error(`Media not found: ${mediaId}`);

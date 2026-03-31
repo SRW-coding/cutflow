@@ -1,4 +1,4 @@
-﻿import { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import type { MediaMetadata } from '@/types/storage';
 import {
   Dialog,
@@ -49,6 +49,7 @@ import {
 import { clearPreviewAudioCache } from '@/features/editor/deps/composition-runtime';
 import { createLogger } from '@/shared/logging/logger';
 import { EDITOR_DENSITY_OPTIONS } from '@/shared/ui/editor-layout';
+import { isTranscriptionEnabled } from '@/shared/utils/transcription-feature';
 import {
   getWhisperQuantizationOption,
   getWhisperLanguageSelectValue,
@@ -257,6 +258,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
   const defaultWhisperLanguageValue = getWhisperLanguageSelectValue(defaultWhisperLanguage);
   const defaultWhisperQuantizationOption = getWhisperQuantizationOption(defaultWhisperQuantization);
+  const showWhisperSettings = isTranscriptionEnabled;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -360,78 +362,80 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               </div>
             </section>
 
-            {/* Whisper */}            
-            <section className="space-y-3">
-              <h3 className="text-sm font-medium text-muted-foreground">Whisper</h3>
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label className="text-sm">Default Model</Label>
-                  <Select
-                    value={defaultWhisperModel}
-                    onValueChange={(value) =>
-                      setSetting('defaultWhisperModel', value as MediaTranscriptModel)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {WHISPER_MODEL_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Used when transcription starts without an explicit model override.
-                  </p>
-                </div>
+            {/* Whisper */}
+            {showWhisperSettings && (
+              <section className="space-y-3">
+                <h3 className="text-sm font-medium text-muted-foreground">Whisper</h3>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Default Model</Label>
+                    <Select
+                      value={defaultWhisperModel}
+                      onValueChange={(value) =>
+                        setSetting('defaultWhisperModel', value as MediaTranscriptModel)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {WHISPER_MODEL_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Used when transcription starts without an explicit model override.
+                    </p>
+                  </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-sm">Default Quantization</Label>
-                  <Select
-                    value={defaultWhisperQuantization}
-                    onValueChange={(value) =>
-                      setSetting('defaultWhisperQuantization', value as MediaTranscriptQuantization)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {WHISPER_QUANTIZATION_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Pick based on memory first. {defaultWhisperQuantizationOption.description}
-                  </p>
-                </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Default Quantization</Label>
+                    <Select
+                      value={defaultWhisperQuantization}
+                      onValueChange={(value) =>
+                        setSetting('defaultWhisperQuantization', value as MediaTranscriptQuantization)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {WHISPER_QUANTIZATION_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Pick based on memory first. {defaultWhisperQuantizationOption.description}
+                    </p>
+                  </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-sm">Default Language</Label>
-                  <Combobox
-                    value={defaultWhisperLanguageValue}
-                    onValueChange={(value) =>
-                      setSetting('defaultWhisperLanguage', getWhisperLanguageSettingValue(value))
-                    }
-                    options={WHISPER_LANGUAGE_OPTIONS}
-                    placeholder="Auto-detect"
-                    searchPlaceholder="Search languages..."
-                    emptyMessage="No languages match that search."
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Choose Auto-detect to infer the language, or lock transcription to a known language for faster startup.
-                  </p>
-                </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Default Language</Label>
+                    <Combobox
+                      value={defaultWhisperLanguageValue}
+                      onValueChange={(value) =>
+                        setSetting('defaultWhisperLanguage', getWhisperLanguageSettingValue(value))
+                      }
+                      options={WHISPER_LANGUAGE_OPTIONS}
+                      placeholder="Auto-detect"
+                      searchPlaceholder="Search languages..."
+                      emptyMessage="No languages match that search."
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Choose Auto-detect to infer the language, or lock transcription to a known language for faster startup.
+                    </p>
+                  </div>
 
-                <LocalInferenceUnloadControl />
-              </div>
-            </section>
+                  <LocalInferenceUnloadControl />
+                </div>
+              </section>
+            )}
 
             {/* Storage */}
             <section className="space-y-3">

@@ -1,4 +1,4 @@
-﻿import { useRef, useEffect, useMemo, memo, useCallback, useState } from 'react';
+import { useRef, useEffect, useMemo, memo, useCallback, useState } from 'react';
 import type { TimelineItem as TimelineItemType } from '@/types/timeline';
 import { useTimelineZoomContext } from '../../contexts/timeline-zoom-context';
 import { useTimelineStore } from '../../stores/timeline-store';
@@ -57,6 +57,7 @@ import type { MediaTranscriptModel } from '@/types/storage';
 import { WHISPER_MODEL_LABELS } from '@/shared/utils/whisper-settings';
 import { isLocalInferenceCancellationError } from '@/shared/state/local-inference';
 import { getTranscriptionOverallPercent } from '@/shared/utils/transcription-progress';
+import { isTranscriptionEnabled } from '@/shared/utils/transcription-feature';
 const CAPTION_GENERATION_OVERLAY_ID = 'caption-generation';
 const EMPTY_SEGMENT_OVERLAYS = [] as const;
 
@@ -85,6 +86,7 @@ interface TimelineItemProps {
  */
 export const TimelineItem = memo(function TimelineItem({ item, timelineDuration = 30, trackLocked = false, trackHidden = false }: TimelineItemProps) {
   const { timeToPixels, frameToPixels, pixelsToFrame, pixelsPerSecond } = useTimelineZoomContext();
+  const canUseTranscription = isTranscriptionEnabled;
 
   // Granular selector: only re-render when THIS item's selection state changes
   const isSelected = useSelectionStore(
@@ -1075,6 +1077,14 @@ export const TimelineItem = memo(function TimelineItem({ item, timelineDuration 
       replaceExisting?: boolean;
     },
   ) => {
+    if (!canUseTranscription) {
+      useMediaLibraryStore.getState().showNotification({
+        type: 'error',
+        message: 'Transcription is disabled (VITE_ENABLE_TRANSCRIPTION=false)',
+      });
+      return;
+    }
+
     if ((item.type !== 'video' && item.type !== 'audio') || !item.mediaId || isBroken) {
       return;
     }
@@ -1172,7 +1182,7 @@ export const TimelineItem = memo(function TimelineItem({ item, timelineDuration 
     };
 
     void run();
-  }, [item.id, item.mediaId, item.type, isBroken]);
+  }, [canUseTranscription, item.id, item.mediaId, item.type, isBroken]);
 
   const handleGenerateCaptions = useCallback((model: MediaTranscriptModel) => {
     handleCaptionGeneration(model);
@@ -1268,7 +1278,7 @@ export const TimelineItem = memo(function TimelineItem({ item, timelineDuration 
           return frame > item.from && frame < item.from + item.durationInFrames;
         })()}
         onFreezeFrame={handleFreezeFrame}
-        canGenerateCaptions={(item.type === 'video' || item.type === 'audio') && !!item.mediaId && !isBroken}
+        canGenerateCaptions={canUseTranscription && (item.type === 'video' || item.type === 'audio') && !!item.mediaId && !isBroken}
         canRegenerateCaptions={hasGeneratedCaptions}
         isGeneratingCaptions={isCaptionGenerationActive || transcriptStatus === 'transcribing'}
         defaultCaptionModel={defaultWhisperModel}

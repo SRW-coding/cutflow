@@ -56,9 +56,9 @@ export const WHISPER_QUANTIZATION_OPTIONS: ReadonlyArray<{
 
 export function getWhisperQuantizationOption(
   value: MediaTranscriptQuantization | undefined,
-) {
+): (typeof WHISPER_QUANTIZATION_OPTIONS)[number] {
   return WHISPER_QUANTIZATION_OPTIONS.find((option) => option.value === value)
-    ?? WHISPER_QUANTIZATION_OPTIONS[0];
+    ?? WHISPER_QUANTIZATION_OPTIONS[0]!;
 }
 
 const WHISPER_LANGUAGE_NAMES = {

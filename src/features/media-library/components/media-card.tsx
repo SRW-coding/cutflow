@@ -20,6 +20,7 @@ import {
   getTranscriptionOverallPercent,
   getTranscriptionStageLabel,
 } from '@/shared/utils/transcription-progress';
+import { isTranscriptionEnabled } from '@/shared/utils/transcription-feature';
 
 interface MediaCardProps {
   media: MediaMetadata;
@@ -55,6 +56,7 @@ export function MediaCard({ media, selected = false, isBroken = false, onSelect,
   const hasProxy = proxyStatus === 'ready';
   const hasTranscript = transcriptStatus === 'ready';
   const isTranscribing = transcriptStatus === 'transcribing';
+  const canTranscribe = isTranscriptionEnabled;
 
   // Load thumbnail on mount and when thumbnailId changes (e.g. after regeneration)
   useEffect(() => {
@@ -333,13 +335,13 @@ export function MediaCard({ media, selected = false, isBroken = false, onSelect,
                   Generate Proxy
                 </DropdownMenuItem>
               )}
-              {isTranscribable && !isBroken && !isTranscribing && (
+              {canTranscribe && isTranscribable && !isBroken && !isTranscribing && (
                 <DropdownMenuItem onClick={handleGenerateTranscript}>
                   <FileText className="w-3 h-3 mr-2" />
                   {hasTranscript ? 'Regenerate Transcript' : 'Transcribe Audio'}
                 </DropdownMenuItem>
               )}
-              {isTranscribable && !isBroken && isTranscribing && (
+              {canTranscribe && isTranscribable && !isBroken && isTranscribing && (
                 <DropdownMenuItem disabled>
                   <Loader2 className="w-3 h-3 mr-2 animate-spin" />
                   {transcriptProgressLabel}
@@ -493,13 +495,13 @@ export function MediaCard({ media, selected = false, isBroken = false, onSelect,
                     Generate Proxy
                   </DropdownMenuItem>
                 )}
-                {isTranscribable && !isBroken && !isTranscribing && (
+                {canTranscribe && isTranscribable && !isBroken && !isTranscribing && (
                   <DropdownMenuItem onClick={handleGenerateTranscript}>
                     <FileText className="w-3 h-3 mr-2" />
                     {hasTranscript ? 'Regenerate Transcript' : 'Transcribe Audio'}
                   </DropdownMenuItem>
                 )}
-                {isTranscribable && !isBroken && isTranscribing && (
+                {canTranscribe && isTranscribable && !isBroken && isTranscribing && (
                   <DropdownMenuItem disabled>
                     <Loader2 className="w-3 h-3 mr-2 animate-spin" />
                     {transcriptProgressLabel}

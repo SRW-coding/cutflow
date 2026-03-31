@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { Layers, ArrowRight, Play, FolderOpen, Download, Star, ExternalLink } from 'lucide-react';
 import { FreeCutLogo } from '@/components/brand/freecut-logo';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,16 @@ import {
 } from '@/components/ui/accordion';
 
 export const Route = createFileRoute('/')({
+  beforeLoad: () => {
+    const redirectTo = import.meta.env.VITE_LANDING_REDIRECT_TO as string | undefined;
+
+    if (!redirectTo || redirectTo === 'false') return;
+
+    const to = redirectTo.startsWith('/') ? redirectTo : `/${redirectTo}`;
+    if (to === '/') return;
+
+    throw redirect({ to });
+  },
   component: LandingPage,
 });
 
@@ -157,16 +167,7 @@ function LandingPage() {
               </Link>
             </Button>
 
-            <Button asChild variant="outline" size="lg" className="gap-2">
-              <a
-                href="https://github.com/walterlow/freecut"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Star className="h-4 w-4" />
-                Star on GitHub
-              </a>
-            </Button>
+           
           </div>
         </div>
       </section>
@@ -318,16 +319,7 @@ function LandingPage() {
               </Link>
             </Button>
 
-            <Button asChild variant="outline" size="lg" className="gap-2">
-              <a
-                href="https://github.com/walterlow/freecut"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Star className="h-4 w-4" />
-                Star on GitHub
-              </a>
-            </Button>
+           
           </div>
         </div>
       </section>
