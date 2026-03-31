@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Video frame extractor using mediabunny for precise frame access.
  *
  * This replaces HTML5 video element seeking which is slow and imprecise.
@@ -314,6 +314,17 @@ export class VideoFrameExtractor {
     }
 
     try {
+      // Prefer mediabunny's sample.draw() when available.
+      // It correctly applies rotation metadata (common in phone HEVC) and
+      // avoids "random" orientation/fit differences between decode paths.
+      if (typeof sample.draw === 'function') {
+        // If we previously cached a VideoFrame for this sample, drop it so we
+        // don't keep extra decoded buffers alive unnecessarily.
+        this.closeCachedVideoFrame();
+        sample.draw(ctx, x, y, width, height);
+        return true;
+      }
+
       // Prefer the VideoFrame path so we can respect visibleRect cropping.
       // Direct sample.draw() can include padded decode columns that halftone
       // turns into bright side fringes.
