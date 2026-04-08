@@ -87,15 +87,12 @@ const BrollsProjectIdRoute = BrollsProjectIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-<<<<<<< Updated upstream
-  '/brolls/$projectId': typeof BrollsProjectIdRoute
-=======
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/otp': typeof OtpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
->>>>>>> Stashed changes
+  '/brolls/$projectId': typeof BrollsProjectIdRoute
   '/editor/$projectId': typeof EditorProjectIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/projects/new': typeof ProjectsNewRoute
@@ -104,15 +101,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-<<<<<<< Updated upstream
-  '/brolls/$projectId': typeof BrollsProjectIdRoute
-=======
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/otp': typeof OtpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
->>>>>>> Stashed changes
+  '/brolls/$projectId': typeof BrollsProjectIdRoute
   '/editor/$projectId': typeof EditorProjectIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/projects/new': typeof ProjectsNewRoute
@@ -122,15 +116,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-<<<<<<< Updated upstream
-  '/brolls/$projectId': typeof BrollsProjectIdRoute
-=======
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/otp': typeof OtpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
->>>>>>> Stashed changes
+  '/brolls/$projectId': typeof BrollsProjectIdRoute
   '/editor/$projectId': typeof EditorProjectIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/projects/new': typeof ProjectsNewRoute
@@ -141,15 +132,12 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-<<<<<<< Updated upstream
-    | '/brolls/$projectId'
-=======
     | '/forgot-password'
     | '/login'
     | '/otp'
     | '/reset-password'
     | '/signup'
->>>>>>> Stashed changes
+    | '/brolls/$projectId'
     | '/editor/$projectId'
     | '/projects/$projectId'
     | '/projects/new'
@@ -158,15 +146,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-<<<<<<< Updated upstream
-    | '/brolls/$projectId'
-=======
     | '/forgot-password'
     | '/login'
     | '/otp'
     | '/reset-password'
     | '/signup'
->>>>>>> Stashed changes
+    | '/brolls/$projectId'
     | '/editor/$projectId'
     | '/projects/$projectId'
     | '/projects/new'
@@ -175,15 +160,12 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-<<<<<<< Updated upstream
-    | '/brolls/$projectId'
-=======
     | '/forgot-password'
     | '/login'
     | '/otp'
     | '/reset-password'
     | '/signup'
->>>>>>> Stashed changes
+    | '/brolls/$projectId'
     | '/editor/$projectId'
     | '/projects/$projectId'
     | '/projects/new'
@@ -193,15 +175,12 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-<<<<<<< Updated upstream
-  BrollsProjectIdRoute: typeof BrollsProjectIdRoute
-=======
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   OtpRoute: typeof OtpRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
->>>>>>> Stashed changes
+  BrollsProjectIdRoute: typeof BrollsProjectIdRoute
   EditorProjectIdRoute: typeof EditorProjectIdRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
   ProjectsNewRoute: typeof ProjectsNewRoute
@@ -300,15 +279,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-<<<<<<< Updated upstream
-  BrollsProjectIdRoute: BrollsProjectIdRoute,
-=======
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   OtpRoute: OtpRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
->>>>>>> Stashed changes
+  BrollsProjectIdRoute: BrollsProjectIdRoute,
   EditorProjectIdRoute: EditorProjectIdRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,
   ProjectsNewRoute: ProjectsNewRoute,

@@ -3,7 +3,6 @@ import path from 'node:path';
 import process from 'node:process';
 
 function die(message) {
-  // eslint-disable-next-line no-console
   console.error(message);
   process.exit(1);
 }
@@ -78,7 +77,6 @@ function parseArgs(argv) {
 }
 
 function printHelp() {
-  // eslint-disable-next-line no-console
   console.log(
     [
       'Import a local b-roll folder tree into Cutflow API.',
@@ -209,7 +207,6 @@ async function scanTree(root, { generalSubcategoryName, includeExtensions, verbo
     if (total === 0) continue;
 
     if (verbose) {
-      // eslint-disable-next-line no-console
       console.log(`[scan] ${categoryName}: ${subcategories.length} subcategory(ies), ${total} file(s)`);
     }
 
@@ -449,7 +446,6 @@ async function main() {
     }
   }
 
-  // eslint-disable-next-line no-console
   console.log(
     [
       `Planned import: ${plan.categories.length} categor(ies), ${uploadTasks.length} item(s)`,
@@ -483,7 +479,6 @@ async function main() {
     const catKey = cat.name.toLowerCase();
     let catEntry = index.get(catKey);
     if (!catEntry) {
-      // eslint-disable-next-line no-console
       console.log(`[api] create category: ${cat.name}`);
       const created = await apiCreateCategory(apiBase, args.token, cat.name);
       catEntry = { id: created.id, name: created.name, subByNameLower: new Map() };
@@ -494,7 +489,6 @@ async function main() {
       const subKey = String(sub.name).trim().toLowerCase();
       let subEntry = catEntry.subByNameLower.get(subKey);
       if (!subEntry) {
-        // eslint-disable-next-line no-console
         console.log(`[api] create subcategory: ${cat.name} > ${sub.name}`);
         const created = await apiCreateSubcategory(apiBase, args.token, catEntry.id, sub.name);
         subEntry = { id: created.id, name: created.name };
@@ -504,7 +498,6 @@ async function main() {
     }
   }
 
-  // eslint-disable-next-line no-console
   console.log(`[api] uploading ${uploadTasks.length} file(s) (concurrency=${args.concurrency})...`);
 
   let uploaded = 0;
@@ -528,7 +521,6 @@ async function main() {
         if (st.size > maxBytes) {
           skippedTooLarge++;
           if (args.verbose) {
-            // eslint-disable-next-line no-console
             console.log(
               `[skip] too large (${(st.size / (1024 * 1024)).toFixed(2)} MB > ${args.maxMb} MB): ${t.filePath}`
             );
@@ -549,19 +541,16 @@ async function main() {
         failed++;
         const msg = String(e instanceof Error ? e.message : e);
         failures.push({ filePath: t.filePath, message: msg });
-        // eslint-disable-next-line no-console
         console.error(`[error] ${t.filePath}\n${msg}\n`);
         if (args.failFast) throw e;
       }
       if (uploaded % 25 === 0 || args.verbose) {
-        // eslint-disable-next-line no-console
         console.log(`[api] uploaded ${uploaded}/${uploadTasks.length}`);
       }
     },
     args.concurrency
   );
 
-  // eslint-disable-next-line no-console
   console.log(
     [
       'Import complete.',
