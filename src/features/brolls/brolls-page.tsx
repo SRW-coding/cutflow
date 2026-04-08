@@ -10,9 +10,9 @@ import {
   fetchBrollLibrary,
   suggestedFileNameForBroll,
   type BrollLibraryItem,
-} from '@/features/editor/services/broll-library-api';
-import { mediaLibraryService } from '@/features/media-library/services/media-library-service';
-import { useProjectStore } from '@/features/projects/stores/project-store';
+} from '@/features/brolls/deps/broll-library-api';
+import { mediaLibraryService } from '@/features/brolls/deps/media-library';
+import { useProjectStore } from '@/features/brolls/deps/projects';
 import {
   Dialog,
   DialogContent,
