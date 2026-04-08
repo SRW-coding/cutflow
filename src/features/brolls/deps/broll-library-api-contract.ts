@@ -2,5 +2,5 @@ export {
   fetchBrollLibrary,
   suggestedFileNameForBroll,
   type BrollLibraryItem,
-} from './broll-library-api-contract';
+} from '@/features/editor/services/broll-library-api';
 

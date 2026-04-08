@@ -1,2 +1,2 @@
-export { mediaLibraryService } from '@/features/media-library/services/media-library-service';
+export { mediaLibraryService } from './media-library-contract';
 
