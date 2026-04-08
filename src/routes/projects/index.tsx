@@ -5,7 +5,7 @@ import { createLogger } from '@/shared/logging/logger';
 
 const logger = createLogger('ProjectsIndex');
 import { Button } from '@/components/ui/button';
-import { Plus, Upload, FolderOpen, File, Github } from 'lucide-react';
+import { Plus, Upload, FolderOpen, File } from 'lucide-react';
 import { FreeCutLogo } from '@/components/brand/freecut-logo';
 import { ProjectList } from '@/features/projects/components/project-list';
 import { ProjectForm } from '@/features/projects/components/project-form';

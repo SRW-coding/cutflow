@@ -11,9 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
+import { Route as BrollsIndexRouteImport } from './routes/brolls/index'
 import { Route as ProjectsNewRouteImport } from './routes/projects/new'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
 import { Route as EditorProjectIdRouteImport } from './routes/editor/$projectId'
+import { Route as BrollsProjectIdRouteImport } from './routes/brolls/$projectId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -23,6 +25,11 @@ const IndexRoute = IndexRouteImport.update({
 const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
   id: '/projects/',
   path: '/projects/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BrollsIndexRoute = BrollsIndexRouteImport.update({
+  id: '/brolls/',
+  path: '/brolls/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProjectsNewRoute = ProjectsNewRouteImport.update({
@@ -42,58 +49,77 @@ const EditorProjectIdRoute = EditorProjectIdRouteImport.update({
 } as any).lazy(() =>
   import('./routes/editor/$projectId.lazy').then((d) => d.Route),
 )
+const BrollsProjectIdRoute = BrollsProjectIdRouteImport.update({
+  id: '/brolls/$projectId',
+  path: '/brolls/$projectId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/brolls/$projectId': typeof BrollsProjectIdRoute
   '/editor/$projectId': typeof EditorProjectIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/projects/new': typeof ProjectsNewRoute
+  '/brolls': typeof BrollsIndexRoute
   '/projects': typeof ProjectsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/brolls/$projectId': typeof BrollsProjectIdRoute
   '/editor/$projectId': typeof EditorProjectIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/projects/new': typeof ProjectsNewRoute
+  '/brolls': typeof BrollsIndexRoute
   '/projects': typeof ProjectsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/brolls/$projectId': typeof BrollsProjectIdRoute
   '/editor/$projectId': typeof EditorProjectIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/projects/new': typeof ProjectsNewRoute
+  '/brolls/': typeof BrollsIndexRoute
   '/projects/': typeof ProjectsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/brolls/$projectId'
     | '/editor/$projectId'
     | '/projects/$projectId'
     | '/projects/new'
+    | '/brolls'
     | '/projects'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/brolls/$projectId'
     | '/editor/$projectId'
     | '/projects/$projectId'
     | '/projects/new'
+    | '/brolls'
     | '/projects'
   id:
     | '__root__'
     | '/'
+    | '/brolls/$projectId'
     | '/editor/$projectId'
     | '/projects/$projectId'
     | '/projects/new'
+    | '/brolls/'
     | '/projects/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BrollsProjectIdRoute: typeof BrollsProjectIdRoute
   EditorProjectIdRoute: typeof EditorProjectIdRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
   ProjectsNewRoute: typeof ProjectsNewRoute
+  BrollsIndexRoute: typeof BrollsIndexRoute
   ProjectsIndexRoute: typeof ProjectsIndexRoute
 }
 
@@ -111,6 +137,13 @@ declare module '@tanstack/react-router' {
       path: '/projects'
       fullPath: '/projects'
       preLoaderRoute: typeof ProjectsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/brolls/': {
+      id: '/brolls/'
+      path: '/brolls'
+      fullPath: '/brolls'
+      preLoaderRoute: typeof BrollsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/projects/new': {
@@ -134,14 +167,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EditorProjectIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/brolls/$projectId': {
+      id: '/brolls/$projectId'
+      path: '/brolls/$projectId'
+      fullPath: '/brolls/$projectId'
+      preLoaderRoute: typeof BrollsProjectIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BrollsProjectIdRoute: BrollsProjectIdRoute,
   EditorProjectIdRoute: EditorProjectIdRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,
   ProjectsNewRoute: ProjectsNewRoute,
+  BrollsIndexRoute: BrollsIndexRoute,
   ProjectsIndexRoute: ProjectsIndexRoute,
 }
 export const routeTree = rootRouteImport

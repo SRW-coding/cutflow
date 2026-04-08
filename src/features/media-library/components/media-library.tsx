@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useMemo, memo, useCallback } from 'react';
-import { Search, Filter, SortAsc, Video, FileAudio, Image as ImageIcon, Trash2, Grid3x3, List, AlertTriangle, Info, X, FolderOpen, Link2Off, ChevronRight, Film, ArrowLeft, Zap, Loader2, Copy, Check, Upload } from 'lucide-react';
+import { useNavigate } from '@tanstack/react-router';
+import { Search, Filter, SortAsc, Video, FileAudio, Image as ImageIcon, Trash2, Grid3x3, List, AlertTriangle, Info, X, FolderOpen, Link2Off, ChevronRight, Film, ArrowLeft, Zap, Loader2, Copy, Check, Upload, Clapperboard } from 'lucide-react';
 import { createLogger } from '@/shared/logging/logger';
 
 const logger = createLogger('MediaLibrary');
@@ -68,6 +69,7 @@ interface MediaLibraryProps {
 }
 
 export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaLibraryProps) {
+  const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
   const isFocusedRef = useRef(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -407,6 +409,24 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
           >
             <FolderOpen className="w-3.5 h-3.5" />
             <span>Import</span>
+          </button>
+
+          {/* B-roll page */}
+          <button
+            onClick={() => {
+              if (!currentProjectId) return;
+              navigate({ to: '/brolls/$projectId', params: { projectId: currentProjectId } });
+            }}
+            disabled={!currentProjectId}
+            className="flex items-center gap-1.5 h-7 px-2.5 rounded-md
+              bg-primary text-primary-foreground
+              hover:bg-primary/90
+              disabled:opacity-40 disabled:cursor-not-allowed
+              transition-colors duration-150"
+            title="Browse b-roll library"
+          >
+            <Clapperboard className="w-3.5 h-3.5" />
+            <span>B-roll</span>
           </button>
 
           {/* Missing media indicator */}

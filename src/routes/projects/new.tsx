@@ -6,8 +6,6 @@ import { ProjectForm } from '@/features/projects/components/project-form';
 import { useCreateProject } from '@/features/projects/hooks/use-project-actions';
 import { useProjectStore } from '@/features/projects/stores/project-store';
 import { FreeCutLogo } from '@/components/brand/freecut-logo';
-import { Button } from '@/components/ui/button';
-import { Github } from 'lucide-react';
 import type { ProjectFormData } from '@/features/projects/utils/validation';
 
 const logger = createLogger('NewProject');

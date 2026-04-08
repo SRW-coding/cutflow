@@ -1,0 +1,22 @@
+# Cutflow SPA: unknown paths -> index.html (client-side router).
+# Place next to index.html (included in dist/ after `npm run build`).
+#
+# Still seeing Apache's default 404?
+# 1) This file must be uploaded (name: .htaccess) next to index.html.
+# 2) VirtualHost needs: AllowOverride All  for that folder (otherwise .htaccess is ignored).
+# 3) Enable Apache module: mod_rewrite
+# 4) App in a subfolder? Uncomment RewriteBase below AND set Vite base in vite.config (base: '/folder/').
+
+<IfModule mod_rewrite.c>
+  Options +FollowSymLinks
+  RewriteEngine On
+
+  # Example for https://yoursite.com/cutflow/ — uncomment and match your folder:
+  # RewriteBase /cutflow/
+
+  RewriteRule ^index\.html$ - [L]
+
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . index.html [L]
+</IfModule>

@@ -5,7 +5,6 @@ import {
   ChevronDown,
   Download,
   FolderArchive,
-  Github,
   Keyboard,
   Save,
   Settings,
