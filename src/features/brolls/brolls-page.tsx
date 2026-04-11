@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Film, Image as ImageIcon, Loader2, Search } from 'lucide-react';
+import { Film, Image as ImageIcon, LayoutDashboard, Loader2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { FreeCutLogo } from '@/components/brand/freecut-logo';
 import { Input } from '@/components/ui/input';
@@ -165,6 +165,12 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <Link to="/dashboard">
+              <Button variant="outline" size="lg">
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                Dashboard
+              </Button>
+            </Link>
             {!fixedProjectId && (
               <Button variant="outline" size="lg" onClick={() => setProjectPickerOpen(true)}>
                 Choose Project

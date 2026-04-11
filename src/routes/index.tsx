@@ -161,13 +161,14 @@ function LandingPage() {
 
           <div className="flex flex-col items-center gap-4 sm:flex-row">
             <Button asChild size="lg" className="gap-2 px-8">
-              <Link to="/projects">
+              <Link to="/dashboard">
                 Get Started
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
-
-           
+            <Button asChild variant="outline" size="lg" className="px-8">
+              <Link to="/projects">Projects</Link>
+            </Button>
           </div>
         </div>
       </section>
@@ -313,13 +314,14 @@ function LandingPage() {
           </p>
           <div className="flex flex-col items-center gap-4 sm:flex-row">
             <Button asChild size="lg" className="gap-2 px-8">
-              <Link to="/projects">
+              <Link to="/dashboard">
                 Start Editing
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
-
-           
+            <Button asChild variant="outline" size="lg" className="px-8">
+              <Link to="/projects">Projects</Link>
+            </Button>
           </div>
         </div>
       </section>

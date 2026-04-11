@@ -16,11 +16,18 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
+import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as BrollsIndexRouteImport } from './routes/brolls/index'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as ProjectsNewRouteImport } from './routes/projects/new'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
 import { Route as EditorProjectIdRouteImport } from './routes/editor/$projectId'
+import { Route as DashboardProfileRouteImport } from './routes/dashboard/profile'
 import { Route as BrollsProjectIdRouteImport } from './routes/brolls/$projectId'
+import { Route as AdminUsersRouteImport } from './routes/admin/users'
+import { Route as AdminRolesRouteImport } from './routes/admin/roles'
+import { Route as AdminProfileRouteImport } from './routes/admin/profile'
+import { Route as AdminAnalyticsRouteImport } from './routes/admin/analytics'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -57,9 +64,19 @@ const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
   path: '/projects/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardIndexRoute = DashboardIndexRouteImport.update({
+  id: '/dashboard/',
+  path: '/dashboard/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BrollsIndexRoute = BrollsIndexRouteImport.update({
   id: '/brolls/',
   path: '/brolls/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProjectsNewRoute = ProjectsNewRouteImport.update({
@@ -79,9 +96,34 @@ const EditorProjectIdRoute = EditorProjectIdRouteImport.update({
 } as any).lazy(() =>
   import('./routes/editor/$projectId.lazy').then((d) => d.Route),
 )
+const DashboardProfileRoute = DashboardProfileRouteImport.update({
+  id: '/dashboard/profile',
+  path: '/dashboard/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BrollsProjectIdRoute = BrollsProjectIdRouteImport.update({
   id: '/brolls/$projectId',
   path: '/brolls/$projectId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRolesRoute = AdminRolesRouteImport.update({
+  id: '/admin/roles',
+  path: '/admin/roles',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminProfileRoute = AdminProfileRouteImport.update({
+  id: '/admin/profile',
+  path: '/admin/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
+  id: '/admin/analytics',
+  path: '/admin/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -92,11 +134,18 @@ export interface FileRoutesByFullPath {
   '/otp': typeof OtpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/profile': typeof AdminProfileRoute
+  '/admin/roles': typeof AdminRolesRoute
+  '/admin/users': typeof AdminUsersRoute
   '/brolls/$projectId': typeof BrollsProjectIdRoute
+  '/dashboard/profile': typeof DashboardProfileRoute
   '/editor/$projectId': typeof EditorProjectIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/projects/new': typeof ProjectsNewRoute
+  '/admin': typeof AdminIndexRoute
   '/brolls': typeof BrollsIndexRoute
+  '/dashboard': typeof DashboardIndexRoute
   '/projects': typeof ProjectsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -106,11 +155,18 @@ export interface FileRoutesByTo {
   '/otp': typeof OtpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/profile': typeof AdminProfileRoute
+  '/admin/roles': typeof AdminRolesRoute
+  '/admin/users': typeof AdminUsersRoute
   '/brolls/$projectId': typeof BrollsProjectIdRoute
+  '/dashboard/profile': typeof DashboardProfileRoute
   '/editor/$projectId': typeof EditorProjectIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/projects/new': typeof ProjectsNewRoute
+  '/admin': typeof AdminIndexRoute
   '/brolls': typeof BrollsIndexRoute
+  '/dashboard': typeof DashboardIndexRoute
   '/projects': typeof ProjectsIndexRoute
 }
 export interface FileRoutesById {
@@ -121,11 +177,18 @@ export interface FileRoutesById {
   '/otp': typeof OtpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/profile': typeof AdminProfileRoute
+  '/admin/roles': typeof AdminRolesRoute
+  '/admin/users': typeof AdminUsersRoute
   '/brolls/$projectId': typeof BrollsProjectIdRoute
+  '/dashboard/profile': typeof DashboardProfileRoute
   '/editor/$projectId': typeof EditorProjectIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/projects/new': typeof ProjectsNewRoute
+  '/admin/': typeof AdminIndexRoute
   '/brolls/': typeof BrollsIndexRoute
+  '/dashboard/': typeof DashboardIndexRoute
   '/projects/': typeof ProjectsIndexRoute
 }
 export interface FileRouteTypes {
@@ -137,11 +200,18 @@ export interface FileRouteTypes {
     | '/otp'
     | '/reset-password'
     | '/signup'
+    | '/admin/analytics'
+    | '/admin/profile'
+    | '/admin/roles'
+    | '/admin/users'
     | '/brolls/$projectId'
+    | '/dashboard/profile'
     | '/editor/$projectId'
     | '/projects/$projectId'
     | '/projects/new'
+    | '/admin'
     | '/brolls'
+    | '/dashboard'
     | '/projects'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -151,11 +221,18 @@ export interface FileRouteTypes {
     | '/otp'
     | '/reset-password'
     | '/signup'
+    | '/admin/analytics'
+    | '/admin/profile'
+    | '/admin/roles'
+    | '/admin/users'
     | '/brolls/$projectId'
+    | '/dashboard/profile'
     | '/editor/$projectId'
     | '/projects/$projectId'
     | '/projects/new'
+    | '/admin'
     | '/brolls'
+    | '/dashboard'
     | '/projects'
   id:
     | '__root__'
@@ -165,11 +242,18 @@ export interface FileRouteTypes {
     | '/otp'
     | '/reset-password'
     | '/signup'
+    | '/admin/analytics'
+    | '/admin/profile'
+    | '/admin/roles'
+    | '/admin/users'
     | '/brolls/$projectId'
+    | '/dashboard/profile'
     | '/editor/$projectId'
     | '/projects/$projectId'
     | '/projects/new'
+    | '/admin/'
     | '/brolls/'
+    | '/dashboard/'
     | '/projects/'
   fileRoutesById: FileRoutesById
 }
@@ -180,11 +264,18 @@ export interface RootRouteChildren {
   OtpRoute: typeof OtpRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
+  AdminAnalyticsRoute: typeof AdminAnalyticsRoute
+  AdminProfileRoute: typeof AdminProfileRoute
+  AdminRolesRoute: typeof AdminRolesRoute
+  AdminUsersRoute: typeof AdminUsersRoute
   BrollsProjectIdRoute: typeof BrollsProjectIdRoute
+  DashboardProfileRoute: typeof DashboardProfileRoute
   EditorProjectIdRoute: typeof EditorProjectIdRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
   ProjectsNewRoute: typeof ProjectsNewRoute
+  AdminIndexRoute: typeof AdminIndexRoute
   BrollsIndexRoute: typeof BrollsIndexRoute
+  DashboardIndexRoute: typeof DashboardIndexRoute
   ProjectsIndexRoute: typeof ProjectsIndexRoute
 }
 
@@ -239,11 +330,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/': {
+      id: '/dashboard/'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/brolls/': {
       id: '/brolls/'
       path: '/brolls'
       fullPath: '/brolls'
       preLoaderRoute: typeof BrollsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/projects/new': {
@@ -267,11 +372,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EditorProjectIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/profile': {
+      id: '/dashboard/profile'
+      path: '/dashboard/profile'
+      fullPath: '/dashboard/profile'
+      preLoaderRoute: typeof DashboardProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/brolls/$projectId': {
       id: '/brolls/$projectId'
       path: '/brolls/$projectId'
       fullPath: '/brolls/$projectId'
       preLoaderRoute: typeof BrollsProjectIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/roles': {
+      id: '/admin/roles'
+      path: '/admin/roles'
+      fullPath: '/admin/roles'
+      preLoaderRoute: typeof AdminRolesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/profile': {
+      id: '/admin/profile'
+      path: '/admin/profile'
+      fullPath: '/admin/profile'
+      preLoaderRoute: typeof AdminProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/analytics': {
+      id: '/admin/analytics'
+      path: '/admin/analytics'
+      fullPath: '/admin/analytics'
+      preLoaderRoute: typeof AdminAnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -284,11 +424,18 @@ const rootRouteChildren: RootRouteChildren = {
   OtpRoute: OtpRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
+  AdminAnalyticsRoute: AdminAnalyticsRoute,
+  AdminProfileRoute: AdminProfileRoute,
+  AdminRolesRoute: AdminRolesRoute,
+  AdminUsersRoute: AdminUsersRoute,
   BrollsProjectIdRoute: BrollsProjectIdRoute,
+  DashboardProfileRoute: DashboardProfileRoute,
   EditorProjectIdRoute: EditorProjectIdRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,
   ProjectsNewRoute: ProjectsNewRoute,
+  AdminIndexRoute: AdminIndexRoute,
   BrollsIndexRoute: BrollsIndexRoute,
+  DashboardIndexRoute: DashboardIndexRoute,
   ProjectsIndexRoute: ProjectsIndexRoute,
 }
 export const routeTree = rootRouteImport
