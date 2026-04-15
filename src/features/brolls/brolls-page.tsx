@@ -558,6 +558,7 @@ function BrollCard({
   const [hovered, setHovered] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const hoverTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (item.type !== 'video') return;
@@ -581,11 +582,32 @@ function BrollCard({
     });
   }, [hovered, item.type]);
 
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current !== null) {
+        window.clearTimeout(hoverTimerRef.current);
+        hoverTimerRef.current = null;
+      }
+    };
+  }, []);
+
   return (
     <div
       className="group relative overflow-hidden rounded-md border border-border bg-card shadow-sm transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 text-left"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={() => {
+        if (item.type !== 'video') return;
+        if (hoverTimerRef.current !== null) window.clearTimeout(hoverTimerRef.current);
+        hoverTimerRef.current = window.setTimeout(() => {
+          setHovered(true);
+        }, 700);
+      }}
+      onMouseLeave={() => {
+        if (hoverTimerRef.current !== null) {
+          window.clearTimeout(hoverTimerRef.current);
+          hoverTimerRef.current = null;
+        }
+        setHovered(false);
+      }}
     >
       <div className="relative aspect-video w-full overflow-hidden bg-muted">
         {thumb ? (
