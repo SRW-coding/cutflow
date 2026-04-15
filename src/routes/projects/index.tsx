@@ -5,7 +5,7 @@ import { createLogger } from '@/shared/logging/logger';
 
 const logger = createLogger('ProjectsIndex');
 import { Button } from '@/components/ui/button';
-import { Plus, Upload, FolderOpen, File } from 'lucide-react';
+import { Plus, Upload, FolderOpen, File, LayoutDashboard } from 'lucide-react';
 import { FreeCutLogo } from '@/components/brand/freecut-logo';
 import { ProjectList } from '@/features/projects/components/project-list';
 import { ProjectForm } from '@/features/projects/components/project-form';
@@ -247,7 +247,12 @@ function ProjectsIndex() {
               <FreeCutLogo variant="full" size="md" className="hover:opacity-80 transition-opacity" />
             </Link>
             <div className="flex items-center gap-3">
-            
+              <Button variant="outline" size="lg" className="gap-2" asChild>
+                <Link to="/dashboard">
+                  <LayoutDashboard className="w-4 h-4" />
+                  Dashboard
+                </Link>
+              </Button>
               <Button variant="outline" size="lg" className="gap-2" onClick={handleImportClick}>
                 <Upload className="w-4 h-4" />
                 Import Project
