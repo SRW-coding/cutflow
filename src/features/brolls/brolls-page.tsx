@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Download, LayoutDashboard, Loader2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { FreeCutLogo } from '@/components/brand/freecut-logo';
@@ -48,6 +48,7 @@ function shuffleInPlace<T>(arr: T[]): T[] {
 
 export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   const [query, setQuery] = useState('');
+  const [searchKind, setSearchKind] = useState<'videos'>('videos');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<BrollItemWithMeta[]>([]);
@@ -55,6 +56,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
   const [categories, setCategories] = useState<Array<{ id: number; name: string; thumbnailUrl: string | null }>>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | 'all'>('all');
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<number | 'all' | 'ai' | 'general'>('all');
   const heroVideos = useMemo(
     () => [
       '/assets/hero/0109-53-3banec400z_1080__D.mp4',
@@ -143,11 +145,18 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
     const q = query.trim().toLowerCase();
     return items.filter((it) => {
       if (selectedCategoryId !== 'all' && it.__categoryId !== selectedCategoryId) return false;
+      if (selectedSubcategoryId === 'ai') {
+        if (!/ai/i.test(it.__subcategoryName)) return false;
+      } else if (selectedSubcategoryId === 'general') {
+        if (!/general/i.test(it.__subcategoryName)) return false;
+      } else if (selectedSubcategoryId !== 'all' && it.__subcategoryId !== selectedSubcategoryId) {
+        return false;
+      }
       if (!q) return true;
       const hay = `${it.name ?? ''} ${it.description ?? ''}`.toLowerCase();
       return hay.includes(q);
     });
-  }, [items, query, selectedCategoryId]);
+  }, [items, query, selectedCategoryId, selectedSubcategoryId]);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<15 | 30 | 60>(30);
@@ -156,6 +165,10 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   useEffect(() => {
     setPage(1);
   }, [query, selectedCategoryId]);
+
+  useEffect(() => {
+    setSelectedSubcategoryId('all');
+  }, [selectedCategoryId]);
 
   useEffect(() => {
     setPage(1);
@@ -295,23 +308,35 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
           <div className="absolute inset-0 bg-background/20 backdrop-blur-[1px]" />
         </div>
         <div className="relative mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8">
-          <div className="relative max-w-3xl mx-auto">
-            <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search b-roll…"
-              className="h-14 pl-12 pr-28 text-base text-white placeholder:text-white/80 bg-black/35 backdrop-blur-sm border-0 shadow-sm focus-visible:ring-2 focus-visible:ring-white/25"
-            />
-            <Button
-              type="button"
-              size="sm"
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/15 text-white border border-white/10"
-              onClick={() => setQuery((q) => q)}
-              aria-label="Search"
-            >
-              <Search className="h-5 w-5" />
-            </Button>
+          <div className="max-w-3xl mx-auto">
+            <div className="flex w-full items-center overflow-hidden rounded-md bg-black/35 shadow-sm backdrop-blur-sm ring-1 ring-white/10 focus-within:ring-2 focus-within:ring-white/25">
+              <Select value={searchKind} onValueChange={(v) => setSearchKind(v as 'videos')}>
+                <SelectTrigger className="h-14 w-[140px] rounded-none border-0 border-r border-white/10 bg-white/5 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="videos">Videos</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/70" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search for videos…"
+                  className="h-14 w-full rounded-none border-0 bg-transparent pl-12 pr-12 text-base text-white placeholder:text-white/70 shadow-none focus-visible:ring-0"
+                />
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                className="h-14 rounded-none border-0 border-l border-white/10 bg-white/10 px-4 text-white hover:bg-white/15"
+                onClick={() => setQuery((q) => q)}
+                aria-label="Search"
+              >
+                <Search className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
           <div className="mt-3 text-center text-xs text-white/80">
             {isLoading ? 'Loading b-roll…' : `${filtered.length.toLocaleString()} results`}
@@ -390,6 +415,12 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
           </div>
         ) : (
           <div className="space-y-6">
+            <SubcategoryFilters
+              items={items}
+              selectedCategoryId={selectedCategoryId}
+              selectedSubcategoryId={selectedSubcategoryId}
+              onChange={setSelectedSubcategoryId}
+            />
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">
               {pageItems.map((it) => (
               <BrollCard
@@ -524,8 +555,38 @@ function BrollCard({
   onDownload: () => void;
 }) {
   const thumb = item.thumbnail_url || (item.type === 'image' ? item.url : null);
+  const [hovered, setHovered] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    if (item.type !== 'video') return;
+    const v = videoRef.current;
+    if (!v) return;
+
+    if (!hovered) {
+      try {
+        v.pause();
+        v.currentTime = 0;
+      } catch {
+        /* ignore */
+      }
+      setPreviewLoading(false);
+      return;
+    }
+
+    setPreviewLoading(true);
+    void v.play().catch(() => {
+      // Autoplay might be blocked; keep thumbnail.
+    });
+  }, [hovered, item.type]);
+
   return (
-    <div className="group relative overflow-hidden rounded-md border border-border bg-card shadow-sm transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 text-left">
+    <div
+      className="group relative overflow-hidden rounded-md border border-border bg-card shadow-sm transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 text-left"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       <div className="relative aspect-video w-full overflow-hidden bg-muted">
         {thumb ? (
           <img src={thumb} alt={item.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
@@ -536,6 +597,32 @@ function BrollCard({
             </div>
           </div>
         )}
+
+        {item.type === 'video' && hovered ? (
+          <video
+            ref={videoRef}
+            className="absolute inset-0 h-full w-full object-cover"
+            src={item.url}
+            muted
+            playsInline
+            loop
+            preload="none"
+            controls={false}
+            aria-hidden="true"
+            onLoadStart={() => setPreviewLoading(true)}
+            onCanPlay={() => setPreviewLoading(false)}
+            onPlaying={() => setPreviewLoading(false)}
+          />
+        ) : null}
+
+        {item.type === 'video' && hovered && previewLoading ? (
+          <div className="absolute inset-0 grid place-items-center bg-black/20">
+            <div className="inline-flex items-center gap-2 rounded-full bg-black/45 px-3 py-1.5 text-xs text-white backdrop-blur-sm">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading…
+            </div>
+          </div>
+        ) : null}
 
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100" />
 
@@ -618,6 +705,97 @@ function BrollGridSkeleton() {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function SubcategoryFilters({
+  items,
+  selectedCategoryId,
+  selectedSubcategoryId,
+  onChange,
+}: {
+  items: BrollItemWithMeta[];
+  selectedCategoryId: number | 'all';
+  selectedSubcategoryId: number | 'all' | 'ai' | 'general';
+  onChange: (id: number | 'all' | 'ai' | 'general') => void;
+}) {
+  const subs = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const it of items) {
+      if (selectedCategoryId !== 'all' && it.__categoryId !== selectedCategoryId) continue;
+      map.set(it.__subcategoryId, it.__subcategoryName);
+    }
+    const all = [...map.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const ai = all.filter((s) => /ai/i.test(s.name));
+    const general = all.filter((s) => /general/i.test(s.name));
+    const rest = all.filter((s) => !/ai/i.test(s.name) && !/general/i.test(s.name));
+    return [
+      ...(ai.length ? [{ id: 'ai' as const, name: 'AI' }] : []),
+      ...(general.length ? [{ id: 'general' as const, name: 'General' }] : []),
+      ...rest,
+    ];
+  }, [items, selectedCategoryId]);
+
+  const visible = subs.slice(0, 7);
+  const overflow = subs.slice(7);
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        onClick={() => onChange('all')}
+        className={[
+          'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors',
+          selectedSubcategoryId === 'all'
+            ? 'border-primary/40 bg-primary/10 text-primary'
+            : 'border-border bg-background/50 hover:bg-muted/40',
+        ].join(' ')}
+      >
+        <Search className="h-4 w-4" />
+        All
+      </button>
+      {visible.map((s) => (
+        <button
+          key={s.id}
+          type="button"
+          onClick={() => onChange(s.id)}
+          className={[
+            'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors',
+            selectedSubcategoryId === s.id
+              ? 'border-primary/40 bg-primary/10 text-primary'
+              : 'border-border bg-background/50 hover:bg-muted/40',
+          ].join(' ')}
+        >
+          <Search className="h-4 w-4" />
+          {s.name}
+        </button>
+      ))}
+      {overflow.length ? (
+        <Select
+          value={selectedSubcategoryId === 'all' ? 'all' : String(selectedSubcategoryId)}
+          onValueChange={(v) =>
+            onChange(v === 'all' ? 'all' : v === 'ai' ? 'ai' : v === 'general' ? 'general' : Number(v))
+          }
+        >
+          <SelectTrigger className="h-9 w-[140px] rounded-full bg-background/50">
+            <SelectValue placeholder="More" />
+          </SelectTrigger>
+          <SelectContent className="w-[220px] max-h-64 overflow-y-auto">
+            <SelectItem value="all">All</SelectItem>
+            {subs.some((s) => s.id === 'ai') ? <SelectItem value="ai">AI</SelectItem> : null}
+            {subs.some((s) => s.id === 'general') ? <SelectItem value="general">General</SelectItem> : null}
+            {overflow.map((s) => (
+              <SelectItem key={s.id} value={String(s.id)}>
+                {s.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : null}
     </div>
   );
 }

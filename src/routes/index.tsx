@@ -13,7 +13,9 @@ export const Route = createFileRoute('/')({
   beforeLoad: () => {
     const redirectTo = import.meta.env.VITE_LANDING_REDIRECT_TO as string | undefined;
 
-    if (!redirectTo || redirectTo === 'false') return;
+    if (!redirectTo || redirectTo === 'false') {
+      throw redirect({ to: '/brolls' });
+    }
 
     const to = redirectTo.startsWith('/') ? redirectTo : `/${redirectTo}`;
     if (to === '/') return;
@@ -25,12 +27,12 @@ export const Route = createFileRoute('/')({
 
 const faqItems = [
   {
-    question: 'Is FreeCut really free?',
-    answer: 'Yes, FreeCut is completely free and open source under the MIT license. There are no hidden fees, subscriptions, or watermarks.',
+    question: 'Is CutFlow really free?',
+    answer: 'Yes, CutFlow is completely free and open source under the MIT license. There are no hidden fees, subscriptions, or watermarks.',
   },
   {
     question: 'Do I need to install anything?',
-    answer: 'No installation required. FreeCut runs entirely in your browser. Just open the website and start editing.',
+    answer: 'No installation required. CutFlow runs entirely in your browser. Just open the website and start editing.',
   },
   {
     question: 'Where are my videos stored?',
@@ -42,7 +44,7 @@ const faqItems = [
     answer: (
       <>
         <p className="mb-3">
-          FreeCut currently supports Google Chrome version 102+. We use modern
+          CutFlow currently supports Google Chrome version 102+. We use modern
           browser APIs like WebCodecs and File System Access which have limited
           cross-browser support.
         </p>
@@ -245,7 +247,7 @@ function LandingPage() {
               See it in Action
             </h2>
             <p className="mx-auto max-w-2xl text-muted-foreground">
-              Watch a quick demo of FreeCut's editing capabilities.
+              Watch a quick demo of CutFlow's editing capabilities.
             </p>
           </div>
 
@@ -258,7 +260,7 @@ function LandingPage() {
             <div className="relative aspect-video w-full overflow-hidden bg-muted">
               <img
                 src="/assets/landing/timeline.png"
-                alt="FreeCut demo preview"
+                alt="CutFlow demo preview"
                 className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-black/30 transition-colors group-hover:bg-black/20" />
@@ -284,7 +286,7 @@ function LandingPage() {
               Frequently Asked Questions
             </h2>
             <p className="text-muted-foreground">
-              Everything you need to know about FreeCut.
+              Everything you need to know about CutFlow.
             </p>
           </div>
 
@@ -329,7 +331,7 @@ function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-border px-6 py-8">
         <div className="mx-auto max-w-5xl text-center text-sm text-muted-foreground">
-          MIT License © {new Date().getFullYear()} FreeCut
+          MIT License © {new Date().getFullYear()} CutFlow
         </div>
       </footer>
     </div>
