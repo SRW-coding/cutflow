@@ -22,7 +22,11 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as ProjectsNewRouteImport } from './routes/projects/new'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
 import { Route as EditorProjectIdRouteImport } from './routes/editor/$projectId'
+import { Route as DashboardPurchaseHistoryRouteImport } from './routes/dashboard/purchase-history'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard/profile'
+import { Route as DashboardPlansRouteImport } from './routes/dashboard/plans'
+import { Route as DashboardDevelopersRouteImport } from './routes/dashboard/developers'
+import { Route as DashboardConnectedAccountsRouteImport } from './routes/dashboard/connected-accounts'
 import { Route as BrollsProjectIdRouteImport } from './routes/brolls/$projectId'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as AdminRolesRouteImport } from './routes/admin/roles'
@@ -96,11 +100,33 @@ const EditorProjectIdRoute = EditorProjectIdRouteImport.update({
 } as any).lazy(() =>
   import('./routes/editor/$projectId.lazy').then((d) => d.Route),
 )
+const DashboardPurchaseHistoryRoute =
+  DashboardPurchaseHistoryRouteImport.update({
+    id: '/dashboard/purchase-history',
+    path: '/dashboard/purchase-history',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const DashboardProfileRoute = DashboardProfileRouteImport.update({
   id: '/dashboard/profile',
   path: '/dashboard/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardPlansRoute = DashboardPlansRouteImport.update({
+  id: '/dashboard/plans',
+  path: '/dashboard/plans',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardDevelopersRoute = DashboardDevelopersRouteImport.update({
+  id: '/dashboard/developers',
+  path: '/dashboard/developers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardConnectedAccountsRoute =
+  DashboardConnectedAccountsRouteImport.update({
+    id: '/dashboard/connected-accounts',
+    path: '/dashboard/connected-accounts',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const BrollsProjectIdRoute = BrollsProjectIdRouteImport.update({
   id: '/brolls/$projectId',
   path: '/brolls/$projectId',
@@ -139,7 +165,11 @@ export interface FileRoutesByFullPath {
   '/admin/roles': typeof AdminRolesRoute
   '/admin/users': typeof AdminUsersRoute
   '/brolls/$projectId': typeof BrollsProjectIdRoute
+  '/dashboard/connected-accounts': typeof DashboardConnectedAccountsRoute
+  '/dashboard/developers': typeof DashboardDevelopersRoute
+  '/dashboard/plans': typeof DashboardPlansRoute
   '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/purchase-history': typeof DashboardPurchaseHistoryRoute
   '/editor/$projectId': typeof EditorProjectIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/projects/new': typeof ProjectsNewRoute
@@ -160,7 +190,11 @@ export interface FileRoutesByTo {
   '/admin/roles': typeof AdminRolesRoute
   '/admin/users': typeof AdminUsersRoute
   '/brolls/$projectId': typeof BrollsProjectIdRoute
+  '/dashboard/connected-accounts': typeof DashboardConnectedAccountsRoute
+  '/dashboard/developers': typeof DashboardDevelopersRoute
+  '/dashboard/plans': typeof DashboardPlansRoute
   '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/purchase-history': typeof DashboardPurchaseHistoryRoute
   '/editor/$projectId': typeof EditorProjectIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/projects/new': typeof ProjectsNewRoute
@@ -182,7 +216,11 @@ export interface FileRoutesById {
   '/admin/roles': typeof AdminRolesRoute
   '/admin/users': typeof AdminUsersRoute
   '/brolls/$projectId': typeof BrollsProjectIdRoute
+  '/dashboard/connected-accounts': typeof DashboardConnectedAccountsRoute
+  '/dashboard/developers': typeof DashboardDevelopersRoute
+  '/dashboard/plans': typeof DashboardPlansRoute
   '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/purchase-history': typeof DashboardPurchaseHistoryRoute
   '/editor/$projectId': typeof EditorProjectIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/projects/new': typeof ProjectsNewRoute
@@ -205,7 +243,11 @@ export interface FileRouteTypes {
     | '/admin/roles'
     | '/admin/users'
     | '/brolls/$projectId'
+    | '/dashboard/connected-accounts'
+    | '/dashboard/developers'
+    | '/dashboard/plans'
     | '/dashboard/profile'
+    | '/dashboard/purchase-history'
     | '/editor/$projectId'
     | '/projects/$projectId'
     | '/projects/new'
@@ -226,7 +268,11 @@ export interface FileRouteTypes {
     | '/admin/roles'
     | '/admin/users'
     | '/brolls/$projectId'
+    | '/dashboard/connected-accounts'
+    | '/dashboard/developers'
+    | '/dashboard/plans'
     | '/dashboard/profile'
+    | '/dashboard/purchase-history'
     | '/editor/$projectId'
     | '/projects/$projectId'
     | '/projects/new'
@@ -247,7 +293,11 @@ export interface FileRouteTypes {
     | '/admin/roles'
     | '/admin/users'
     | '/brolls/$projectId'
+    | '/dashboard/connected-accounts'
+    | '/dashboard/developers'
+    | '/dashboard/plans'
     | '/dashboard/profile'
+    | '/dashboard/purchase-history'
     | '/editor/$projectId'
     | '/projects/$projectId'
     | '/projects/new'
@@ -269,7 +319,11 @@ export interface RootRouteChildren {
   AdminRolesRoute: typeof AdminRolesRoute
   AdminUsersRoute: typeof AdminUsersRoute
   BrollsProjectIdRoute: typeof BrollsProjectIdRoute
+  DashboardConnectedAccountsRoute: typeof DashboardConnectedAccountsRoute
+  DashboardDevelopersRoute: typeof DashboardDevelopersRoute
+  DashboardPlansRoute: typeof DashboardPlansRoute
   DashboardProfileRoute: typeof DashboardProfileRoute
+  DashboardPurchaseHistoryRoute: typeof DashboardPurchaseHistoryRoute
   EditorProjectIdRoute: typeof EditorProjectIdRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
   ProjectsNewRoute: typeof ProjectsNewRoute
@@ -372,11 +426,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EditorProjectIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/purchase-history': {
+      id: '/dashboard/purchase-history'
+      path: '/dashboard/purchase-history'
+      fullPath: '/dashboard/purchase-history'
+      preLoaderRoute: typeof DashboardPurchaseHistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/profile': {
       id: '/dashboard/profile'
       path: '/dashboard/profile'
       fullPath: '/dashboard/profile'
       preLoaderRoute: typeof DashboardProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/plans': {
+      id: '/dashboard/plans'
+      path: '/dashboard/plans'
+      fullPath: '/dashboard/plans'
+      preLoaderRoute: typeof DashboardPlansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/developers': {
+      id: '/dashboard/developers'
+      path: '/dashboard/developers'
+      fullPath: '/dashboard/developers'
+      preLoaderRoute: typeof DashboardDevelopersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/connected-accounts': {
+      id: '/dashboard/connected-accounts'
+      path: '/dashboard/connected-accounts'
+      fullPath: '/dashboard/connected-accounts'
+      preLoaderRoute: typeof DashboardConnectedAccountsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/brolls/$projectId': {
@@ -429,7 +511,11 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRolesRoute: AdminRolesRoute,
   AdminUsersRoute: AdminUsersRoute,
   BrollsProjectIdRoute: BrollsProjectIdRoute,
+  DashboardConnectedAccountsRoute: DashboardConnectedAccountsRoute,
+  DashboardDevelopersRoute: DashboardDevelopersRoute,
+  DashboardPlansRoute: DashboardPlansRoute,
   DashboardProfileRoute: DashboardProfileRoute,
+  DashboardPurchaseHistoryRoute: DashboardPurchaseHistoryRoute,
   EditorProjectIdRoute: EditorProjectIdRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,
   ProjectsNewRoute: ProjectsNewRoute,

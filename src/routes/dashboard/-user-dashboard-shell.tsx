@@ -1,33 +1,34 @@
 import type { ReactNode } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
-import { Clapperboard, FolderOpen, LayoutDashboard, Sparkles } from 'lucide-react';
+import { Code2, CreditCard, History, Link2, User } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { FreeCutLogo } from '@/components/brand/freecut-logo';
 import { HeaderProfileMenu } from '@/components/shell/header-profile-menu';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/shared/ui/cn';
 import { MOCK_DASHBOARD_USER } from './-user-dashboard-mock';
 
-const NAV = [
-  { to: '/dashboard' as const, label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/projects' as const, label: 'Projects', icon: FolderOpen },
-  { to: '/brolls' as const, label: 'B-roll', icon: Clapperboard },
-];
+const ACCOUNT_NAV = [
+  { to: '/dashboard/profile' as const, label: 'Profile', icon: User, enabled: true },
+  { to: '/dashboard/plans' as const, label: 'Plans', icon: CreditCard, enabled: true },
+  { to: '/dashboard/purchase-history' as const, label: 'Purchase history', icon: History, enabled: true },
+  { to: '/dashboard/connected-accounts' as const, label: 'Connected Accounts', icon: Link2, enabled: true },
+  { to: '/dashboard/developers' as const, label: 'Developers', icon: Code2, enabled: true },
+] as const;
 
 export function UserDashboardShell({
   title,
-  description,
   children,
 }: {
   title: string;
-  description?: string;
   children: ReactNode;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="panel-header border-b border-border">
-        <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-6 py-4">
+    <div className="min-h-screen bg-muted/30 text-foreground">
+      <header className="panel-header border-b border-border bg-background">
+        <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-4 px-6 py-4">
           <div className="flex min-w-0 items-center gap-4">
             <Link to="/" className="shrink-0">
               <FreeCutLogo variant="full" size="md" className="opacity-90 transition-opacity hover:opacity-100" />
@@ -44,45 +45,49 @@ export function UserDashboardShell({
           <HeaderProfileMenu
             variant="user"
             profileTo="/dashboard/profile"
-            displayName={MOCK_DASHBOARD_USER.displayName}
+            displayName={MOCK_DASHBOARD_USER.fullName}
             email={MOCK_DASHBOARD_USER.email}
           />
         </div>
       </header>
 
-      <div className="mx-auto flex max-w-[1600px] flex-col gap-6 px-6 py-6 lg:flex-row lg:gap-8">
-        <aside className="shrink-0 lg:w-52">
-          <nav className="flex flex-row gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
-            {NAV.map(({ to, label, icon: Icon, end }) => {
-              const active = end
-                ? pathname === '/dashboard' || pathname === '/dashboard/'
-                : pathname === to || pathname.startsWith(`${to}/`);
-              return (
-                <Link
-                  key={to}
-                  to={to}
-                  className={cn(
-                    'flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                    active
-                      ? 'bg-primary/15 text-primary'
-                      : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
-                  )}
-                >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {label}
-                </Link>
-              );
-            })}
-          </nav>
-        </aside>
+      <div className="mx-auto w-full max-w-[1200px] px-6 py-10">
+        <div className="flex flex-col gap-8 lg:flex-row lg:gap-12">
+          <aside className="shrink-0 lg:w-72">
+            <div className="text-sm font-semibold">My Account</div>
+            <nav className="mt-3 overflow-hidden rounded-md border border-border bg-background">
+              {ACCOUNT_NAV.map(({ to, label, icon: Icon, enabled }) => {
+                const active = enabled && to ? pathname === to || pathname.startsWith(`${to}/`) : false;
+                const itemClass = cn(
+                  'flex w-full items-center gap-2 px-4 py-3 text-sm transition-colors',
+                  active ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground',
+                  enabled ? 'hover:bg-muted/70 hover:text-foreground' : 'opacity-60'
+                );
 
-        <main className="min-w-0 flex-1">
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-            {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
-          </div>
-          {children}
-        </main>
+                if (enabled && to) {
+                  return (
+                    <Link key={label} to={to} className={itemClass}>
+                      <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span>{label}</span>
+                    </Link>
+                  );
+                }
+
+                return (
+                  <div key={label} className={itemClass} aria-disabled="true">
+                    <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span>{label}</span>
+                  </div>
+                );
+              })}
+            </nav>
+          </aside>
+
+          <main className="min-w-0 flex-1">
+            <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+            <div className="mt-6">{children}</div>
+          </main>
+        </div>
       </div>
     </div>
   );

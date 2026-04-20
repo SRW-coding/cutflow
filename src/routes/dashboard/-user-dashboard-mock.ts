@@ -1,9 +1,12 @@
 /** Design-only mock data for the user dashboard (no backend). */
 
 export const MOCK_DASHBOARD_USER = {
-  displayName: 'Alex Editor',
-  email: 'alex@example.com',
-  initials: 'AE',
+  fullName: 'Roohan Sarna',
+  userId: '377547775',
+  userName: 'roohannawaz15984',
+  email: 'roohan.nawaz786@gmail.com',
+  passwordMasked: '••••••••••••',
+  initials: 'RS',
 } as const;
 
 export const MOCK_STORAGE = {
