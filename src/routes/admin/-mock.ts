@@ -15,15 +15,16 @@ export type MockUser = {
   plan: 'premium' | 'basic';
   status: 'active' | 'inactive' | 'suspended';
   joined: string;
+  usageTokens: number;
 };
 
 export const MOCK_USERS: MockUser[] = [
-  { id: '1', name: 'Alex Rivera', email: 'alex@example.com', plan: 'premium', status: 'active', joined: '2024-08-12' },
-  { id: '2', name: 'Jordan Lee', email: 'jordan@example.com', plan: 'basic', status: 'active', joined: '2025-01-03' },
-  { id: '3', name: 'Sam Taylor', email: 'sam@example.com', plan: 'premium', status: 'inactive', joined: '2023-11-20' },
-  { id: '4', name: 'Casey Morgan', email: 'casey@example.com', plan: 'basic', status: 'active', joined: '2025-03-01' },
-  { id: '5', name: 'Riley Chen', email: 'riley@example.com', plan: 'premium', status: 'active', joined: '2024-05-18' },
-  { id: '6', name: 'Morgan Blake', email: 'morgan@example.com', plan: 'basic', status: 'suspended', joined: '2024-12-07' },
+  { id: '1', name: 'Alex Rivera', email: 'alex@example.com', plan: 'premium', status: 'active', joined: '2024-08-12', usageTokens: 128_420 },
+  { id: '2', name: 'Jordan Lee', email: 'jordan@example.com', plan: 'basic', status: 'active', joined: '2025-01-03', usageTokens: 14_980 },
+  { id: '3', name: 'Sam Taylor', email: 'sam@example.com', plan: 'premium', status: 'inactive', joined: '2023-11-20', usageTokens: 302_118 },
+  { id: '4', name: 'Casey Morgan', email: 'casey@example.com', plan: 'basic', status: 'active', joined: '2025-03-01', usageTokens: 8_204 },
+  { id: '5', name: 'Riley Chen', email: 'riley@example.com', plan: 'premium', status: 'active', joined: '2024-05-18', usageTokens: 96_443 },
+  { id: '6', name: 'Morgan Blake', email: 'morgan@example.com', plan: 'basic', status: 'suspended', joined: '2024-12-07', usageTokens: 21_775 },
 ];
 
 export function formatInt(n: number) {

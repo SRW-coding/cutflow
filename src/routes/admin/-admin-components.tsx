@@ -74,17 +74,19 @@ export function AdminIconButton({
   label,
   icon: Icon,
   variant = 'default',
+  onClick,
 }: {
   label: string;
   icon: LucideIcon;
   variant?: 'default' | 'destructive';
+  onClick?: () => void;
 }) {
   return (
     <button
       type="button"
       title={label}
       aria-label={label}
-      onClick={() => {}}
+      onClick={onClick}
       className={cn(
         'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition-colors',
         'hover:bg-muted hover:text-foreground',
