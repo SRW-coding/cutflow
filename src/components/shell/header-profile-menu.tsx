@@ -11,6 +11,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/shared/ui/cn';
+import { useAuthStore } from '@/stores/auth-store';
+import { authApi } from '@/lib/auth-api';
 
 type HeaderProfileMenuProps = {
   profileTo: '/dashboard/profile' | '/admin/profile';
@@ -27,6 +29,7 @@ export function HeaderProfileMenu({
   variant = 'user',
 }: HeaderProfileMenuProps) {
   const navigate = useNavigate();
+  const { clearAuth, tokens } = useAuthStore();
 
   return (
     <DropdownMenu>
@@ -63,7 +66,10 @@ export function HeaderProfileMenu({
         <DropdownMenuItem
           className="cursor-pointer gap-2 text-destructive focus:text-destructive"
           onClick={() => {
-            toast.message('Signed out', { description: 'Preview only — no session was cleared.' });
+            const rt = tokens?.refreshToken;
+            if (rt) authApi.logout(rt).catch(() => {});
+            clearAuth();
+            toast.success('Signed out');
             void navigate({ to: '/login' });
           }}
         >

@@ -1,9 +1,11 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { FreeCutLogo } from '@/components/brand/freecut-logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { authApi } from '@/lib/auth-api';
 
 export const Route = createFileRoute('/otp')({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -38,12 +40,11 @@ function OtpPage() {
     if (!canSubmit) return;
     setSubmitting(true);
     try {
-      // Frontend-only: simulate verification then route to reset password.
-      await new Promise((r) => setTimeout(r, 650));
-      await navigate({
-        to: '/reset-password',
-        search: { email },
-      });
+      const { resetToken } = await authApi.verifyOtp(email, otp);
+      await navigate({ to: '/reset-password', search: { email, token: resetToken } });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Invalid code';
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
@@ -53,11 +54,13 @@ function OtpPage() {
     if (submitting) return;
     setSubmitting(true);
     try {
-      await new Promise((r) => setTimeout(r, 600));
+      await authApi.forgotPassword(email);
       setResent(true);
       setOtp('');
       inputRef.current?.focus();
       setTimeout(() => setResent(false), 2500);
+    } catch {
+      // fail silently — don't reveal whether email exists
     } finally {
       setSubmitting(false);
     }
@@ -123,9 +126,6 @@ function OtpPage() {
               </Link>
             </div>
 
-            <div className="pt-1 text-xs text-muted-foreground">
-              Frontend-only: this flow does not verify real codes yet.
-            </div>
           </form>
         </div>
       </div>

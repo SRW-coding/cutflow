@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { UserDashboardShell } from './-user-dashboard-shell';
-import { MOCK_DASHBOARD_USER } from './-user-dashboard-mock';
+import { useAuthStore } from '@/stores/auth-store';
 import { useState } from 'react';
 
 export const Route = createFileRoute('/dashboard/profile')({
@@ -45,8 +45,14 @@ function DetailsRow({
 }
 
 function UserProfilePage() {
+  const user = useAuthStore((s) => s.user);
   const [emailPref, setEmailPref] = useState(false);
   const [language, setLanguage] = useState('en');
+
+  const fullName = user
+    ? [user.firstName, user.lastName].filter(Boolean).join(' ') || '—'
+    : '—';
+  const userName = user?.email?.split('@')[0] ?? '—';
 
   return (
     <UserDashboardShell title="Profile">
@@ -55,27 +61,18 @@ function UserProfilePage() {
           <div>
             <div className="text-sm font-semibold">User details</div>
           </div>
-          <button
-            type="button"
-            className="text-xs font-medium text-primary hover:underline"
-            onClick={() => {
-              // design-only
-            }}
-          >
-            Edit
-          </button>
         </div>
         <Separator />
         <div className="px-6">
-          <DetailsRow label="Name" value={MOCK_DASHBOARD_USER.fullName} />
+          <DetailsRow label="Name" value={fullName} />
           <Separator />
-          <DetailsRow label="User ID" value={MOCK_DASHBOARD_USER.userId} actionLabel="Edit" />
+          <DetailsRow label="User ID" value={user?.id ?? '—'} actionLabel="Copy" />
           <Separator />
-          <DetailsRow label="User Name" value={MOCK_DASHBOARD_USER.userName} actionLabel="Edit" />
+          <DetailsRow label="User Name" value={userName} actionLabel="Edit" />
           <Separator />
-          <DetailsRow label="Password" value={MOCK_DASHBOARD_USER.passwordMasked} actionLabel="Edit" />
+          <DetailsRow label="Password" value="••••••••••••" actionLabel="Change" />
           <Separator />
-          <DetailsRow label="E-mail" value={MOCK_DASHBOARD_USER.email} actionLabel="Edit" />
+          <DetailsRow label="E-mail" value={user?.email ?? '—'} actionLabel="Edit" />
         </div>
       </section>
 

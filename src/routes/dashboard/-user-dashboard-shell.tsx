@@ -6,7 +6,7 @@ import { FreeCutLogo } from '@/components/brand/freecut-logo';
 import { HeaderProfileMenu } from '@/components/shell/header-profile-menu';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/shared/ui/cn';
-import { MOCK_DASHBOARD_USER } from './-user-dashboard-mock';
+import { useAuthStore } from '@/stores/auth-store';
 
 const ACCOUNT_NAV = [
   { to: '/dashboard/profile' as const, label: 'Profile', icon: User, enabled: true },
@@ -24,6 +24,11 @@ export function UserDashboardShell({
   children: ReactNode;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const user = useAuthStore((s) => s.user);
+  const displayName = user
+    ? [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email
+    : 'Guest';
+  const email = user?.email ?? '';
 
   return (
     <div className="min-h-screen bg-muted/30 text-foreground">
@@ -45,8 +50,8 @@ export function UserDashboardShell({
           <HeaderProfileMenu
             variant="user"
             profileTo="/dashboard/profile"
-            displayName={MOCK_DASHBOARD_USER.fullName}
-            email={MOCK_DASHBOARD_USER.email}
+            displayName={displayName}
+            email={email}
           />
         </div>
       </header>

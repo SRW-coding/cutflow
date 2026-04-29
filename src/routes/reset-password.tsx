@@ -1,20 +1,23 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { FreeCutLogo } from '@/components/brand/freecut-logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { authApi } from '@/lib/auth-api';
 
 export const Route = createFileRoute('/reset-password')({
   validateSearch: (search: Record<string, unknown>) => ({
     email: typeof search.email === 'string' ? search.email : '',
+    token: typeof search.token === 'string' ? search.token : '',
   }),
   component: ResetPasswordPage,
 });
 
 function ResetPasswordPage() {
   const navigate = useNavigate();
-  const { email } = Route.useSearch();
+  const { email, token } = Route.useSearch();
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -41,11 +44,18 @@ function ResetPasswordPage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
+    if (!token) {
+      toast.error('Missing reset token. Please start the forgot-password flow again.');
+      return;
+    }
     setSubmitting(true);
     try {
-      // Frontend-only: simulate saving new password, then send user to login.
-      await new Promise((r) => setTimeout(r, 750));
+      await authApi.resetPassword(token, password);
+      toast.success('Password reset successfully. Please sign in.');
       await navigate({ to: '/login' });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Reset failed';
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
@@ -124,9 +134,6 @@ function ResetPasswordPage() {
               </Link>
             </div>
 
-            <div className="pt-1 text-xs text-muted-foreground">
-              Frontend-only: this does not update a real account yet.
-            </div>
           </form>
         </div>
       </div>

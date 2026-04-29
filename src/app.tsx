@@ -5,6 +5,7 @@ import { GlobalTooltip } from '@/components/ui/global-tooltip';
 import { Toaster } from '@/components/ui/sonner';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { routeTree } from './routeTree.gen';
+import { useAuthStore } from '@/stores/auth-store';
 
 const router = createRouter({ routeTree });
 
@@ -15,6 +16,13 @@ declare module '@tanstack/react-router' {
 }
 
 export function App() {
+  const loadFromStorage = useAuthStore((s) => s.loadFromStorage);
+
+  // Restore auth session from localStorage on startup
+  useEffect(() => {
+    loadFromStorage();
+  }, [loadFromStorage]);
+
   // Prevent default browser zoom application-wide
   useEffect(() => {
     const wheelListenerOptions: AddEventListenerOptions = { passive: false, capture: true };

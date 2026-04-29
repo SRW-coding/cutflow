@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { UserDashboardShell } from './-user-dashboard-shell';
+import { useAuthStore } from '@/stores/auth-store';
 
 export const Route = createFileRoute('/dashboard/plans')({
   component: PlansPage,
@@ -19,6 +20,10 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 function PlansPage() {
+  const user = useAuthStore((s) => s.user);
+  const planName = user?.subscription?.plan?.name ?? 'Free';
+  const planStatus = user?.subscription?.status ?? 'Active';
+
   return (
     <UserDashboardShell title="Plans">
       <section className="rounded-md border border-border bg-background">
@@ -30,9 +35,9 @@ function PlansPage() {
         </div>
         <Separator />
         <div className="px-6">
-          <InfoRow label="Plan" value="Free (mock)" />
+          <InfoRow label="Plan" value={planName} />
           <Separator />
-          <InfoRow label="Status" value="Active" />
+          <InfoRow label="Status" value={planStatus} />
           <Separator />
           <InfoRow label="Renewal" value="Renews monthly — Apr 30, 2026" />
           <Separator />

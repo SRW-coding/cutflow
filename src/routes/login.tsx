@@ -1,9 +1,12 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { FreeCutLogo } from '@/components/brand/freecut-logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { authApi } from '@/lib/auth-api';
+import { useAuthStore } from '@/stores/auth-store';
 
 export const Route = createFileRoute('/login')({
   component: LoginPage,
@@ -33,13 +36,19 @@ function LoginPage() {
 
   const canSubmit = !submitting && !!email && !!password && !emailError && !passwordError;
 
+  const setAuth = useAuthStore((s) => s.setAuth);
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
     setSubmitting(true);
     try {
-      await new Promise((r) => setTimeout(r, 450));
+      const res = await authApi.login({ email, password });
+      setAuth(res.user, res.tokens);
       await navigate({ to: '/projects' });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Login failed';
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
