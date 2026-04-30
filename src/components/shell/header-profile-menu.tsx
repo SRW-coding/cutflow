@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/shared/ui/cn';
 import { useAuthStore } from '@/stores/auth-store';
-import { authApi } from '@/lib/auth-api';
+import { authApi } from '@/infrastructure/api/auth';
 
 type HeaderProfileMenuProps = {
   profileTo: '/dashboard/profile' | '/admin/profile';

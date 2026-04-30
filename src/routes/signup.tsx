@@ -5,7 +5,7 @@ import { FreeCutLogo } from '@/components/brand/freecut-logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { authApi } from '@/lib/auth-api';
+import { authApi } from '@/infrastructure/api/auth';
 import { useAuthStore } from '@/stores/auth-store';
 
 export const Route = createFileRoute('/signup')({
