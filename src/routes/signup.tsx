@@ -9,6 +9,9 @@ import { authApi } from '@/infrastructure/api/auth';
 import { useAuthStore } from '@/stores/auth-store';
 
 export const Route = createFileRoute('/signup')({
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: typeof search.redirect === 'string' ? search.redirect : undefined,
+  }),
   component: SignupPage,
 });
 
@@ -18,6 +21,7 @@ function isValidEmail(value: string): boolean {
 
 function SignupPage() {
   const navigate = useNavigate();
+  const { redirect } = Route.useSearch();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -60,7 +64,7 @@ function SignupPage() {
     try {
       const res = await authApi.register({ name: name.trim(), email, password });
       setAuth(res.user, res.tokens);
-      await navigate({ to: '/projects' });
+      await navigate({ to: (redirect as never) || '/projects' });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Registration failed';
       toast.error(msg);
@@ -156,7 +160,7 @@ function SignupPage() {
 
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Already have an account?</span>
-              <Link to="/login" className="font-medium text-primary hover:underline">
+              <Link to="/login" search={redirect ? { redirect } : {}} className="font-medium text-primary hover:underline">
                 Sign in
               </Link>
             </div>

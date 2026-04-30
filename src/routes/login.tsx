@@ -9,6 +9,9 @@ import { authApi } from '@/infrastructure/api/auth';
 import { useAuthStore } from '@/stores/auth-store';
 
 export const Route = createFileRoute('/login')({
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: typeof search.redirect === 'string' ? search.redirect : undefined,
+  }),
   component: LoginPage,
 });
 
@@ -18,6 +21,7 @@ function isValidEmail(value: string): boolean {
 
 function LoginPage() {
   const navigate = useNavigate();
+  const { redirect } = Route.useSearch();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,7 +49,7 @@ function LoginPage() {
     try {
       const res = await authApi.login({ email, password });
       setAuth(res.user, res.tokens);
-      await navigate({ to: '/projects' });
+      await navigate({ to: (redirect as never) || '/projects' });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Login failed';
       toast.error(msg);
@@ -127,7 +131,7 @@ function LoginPage() {
 
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Don&apos;t have an account?</span>
-              <Link to="/signup" className="font-medium text-primary hover:underline">
+              <Link to="/signup" search={redirect ? { redirect } : {}} className="font-medium text-primary hover:underline">
                 Create one
               </Link>
             </div>

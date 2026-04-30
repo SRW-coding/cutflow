@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Download, LayoutDashboard, Loader2, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, LayoutDashboard, Loader2, LogOut, Play, Search, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { FreeCutLogo } from '@/components/brand/freecut-logo';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useAuthStore } from '@/stores/auth-store';
+import { authApi } from '@/infrastructure/api/auth';
 
 type BrollItemWithMeta = BrollLibraryItem & {
   __categoryId: number;
@@ -47,6 +49,18 @@ function shuffleInPlace<T>(arr: T[]): T[] {
 }
 
 export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
+  const tokens = useAuthStore((s) => s.tokens);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
+
+  const handleLogout = () => {
+    const rt = tokens?.refreshToken;
+    if (rt) authApi.logout(rt).catch(() => {});
+    clearAuth();
+    toast.success('Signed out');
+  };
+
   const [query, setQuery] = useState('');
   const [searchKind, setSearchKind] = useState<'videos'>('videos');
   const [isLoading, setIsLoading] = useState(true);
@@ -54,6 +68,12 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   const [items, setItems] = useState<BrollItemWithMeta[]>([]);
   const [importingKey, setImportingKey] = useState<string | null>(null);
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
+  const [guestPromptOpen, setGuestPromptOpen] = useState(false);
+  const [guestDownloads, setGuestDownloads] = useState<number>(
+    () => parseInt(localStorage.getItem('brolls_guest_downloads') ?? '0', 10),
+  );
+
+  const GUEST_DOWNLOAD_LIMIT = 1;
   const [categories, setCategories] = useState<Array<{ id: number; name: string; thumbnailUrl: string | null }>>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | 'all'>('all');
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<number | 'all' | 'ai' | 'general'>('all');
@@ -187,6 +207,11 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   }, [filtered, page, pageSize]);
 
   const startImport = async (item: BrollLibraryItem) => {
+    if (!isAuthenticated) {
+      setGuestPromptOpen(true);
+      return;
+    }
+
     const projectId = effectiveProjectId;
     if (!projectId) {
       setProjectPickerOpen(true);
@@ -221,6 +246,11 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   };
 
   const startDownload = async (item: BrollLibraryItem) => {
+    if (!isAuthenticated && guestDownloads >= GUEST_DOWNLOAD_LIMIT) {
+      setGuestPromptOpen(true);
+      return;
+    }
+
     const key = String(item.id);
     setDownloadingKey(key);
     try {
@@ -238,6 +268,12 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+
+      if (!isAuthenticated) {
+        const next = guestDownloads + 1;
+        localStorage.setItem('brolls_guest_downloads', String(next));
+        setGuestDownloads(next);
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Download failed.';
       toast.error('Download failed', { description: msg });
@@ -263,29 +299,55 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <Link to="/dashboard">
-              <Button variant="outline" size="lg">
-                <LayoutDashboard className="mr-2 h-4 w-4" />
-                Dashboard
-              </Button>
-            </Link>
-            {!fixedProjectId && (
-              <Button variant="outline" size="lg" onClick={() => setProjectPickerOpen(true)}>
-                Choose Project
-              </Button>
-            )}
-            {effectiveProjectId ? (
-              <Link to="/editor/$projectId" params={{ projectId: effectiveProjectId }}>
-                <Button variant="outline" size="lg">
-                  Return to Editor
-                </Button>
-              </Link>
+            {isAuthenticated ? (
+              <>
+                <Link to="/dashboard">
+                  <Button variant="outline" size="sm">
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </Button>
+                </Link>
+                {!fixedProjectId && (
+                  <Button variant="outline" size="sm" onClick={() => setProjectPickerOpen(true)}>
+                    Choose Project
+                  </Button>
+                )}
+                {effectiveProjectId ? (
+                  <Link to="/editor/$projectId" params={{ projectId: effectiveProjectId }}>
+                    <Button variant="outline" size="sm">Return to Editor</Button>
+                  </Link>
+                ) : (
+                  <Link to="/projects">
+                    <Button variant="outline" size="sm">My Projects</Button>
+                  </Link>
+                )}
+                <div className="ml-1 flex items-center gap-2 border-l border-border pl-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                    {user?.firstName?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? <User className="h-4 w-4" />}
+                  </div>
+                  <span className="hidden max-w-[120px] truncate text-sm font-medium sm:block">
+                    {user?.firstName ?? user?.email?.split('@')[0]}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    onClick={handleLogout}
+                    title="Sign out"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </div>
+              </>
             ) : (
-              <Link to="/projects">
-                <Button variant="outline" size="lg">
-                  Back to Projects
-                </Button>
-              </Link>
+              <>
+                <Link to="/login" search={{ redirect: '/brolls' }}>
+                  <Button variant="outline" size="sm">Log In</Button>
+                </Link>
+                <Link to="/signup" search={{ redirect: '/brolls' }}>
+                  <Button size="sm">Sign Up Free</Button>
+                </Link>
+              </>
             )}
           </div>
         </div>
@@ -421,7 +483,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
               selectedSubcategoryId={selectedSubcategoryId}
               onChange={setSelectedSubcategoryId}
             />
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
               {pageItems.map((it) => (
               <BrollCard
                 key={it.id}
@@ -491,6 +553,33 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
           </div>
         )}
       </main>
+
+      {/* ── Guest auth prompt ── */}
+      <Dialog open={guestPromptOpen} onOpenChange={setGuestPromptOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-xl">
+              {guestDownloads >= GUEST_DOWNLOAD_LIMIT ? 'Free limit reached' : 'Sign in to import'}
+            </DialogTitle>
+            <DialogDescription className="mt-1.5">
+              {guestDownloads >= GUEST_DOWNLOAD_LIMIT
+                ? 'You\'ve used your free download. Sign in or create a free account to download unlimited b-roll footage.'
+                : 'Create a free account or sign in to import b-roll footage directly into your projects.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-2 flex flex-col gap-3">
+            <Link to="/signup" search={{ redirect: '/brolls' }} onClick={() => setGuestPromptOpen(false)}>
+              <Button className="w-full" size="lg">Sign Up — it&apos;s free</Button>
+            </Link>
+            <Link to="/login" search={{ redirect: '/brolls' }} onClick={() => setGuestPromptOpen(false)}>
+              <Button variant="outline" className="w-full" size="lg">Log In</Button>
+            </Link>
+          </div>
+          <p className="mt-1 text-center text-xs text-muted-foreground">
+            Free accounts get unlimited downloads and project imports.
+          </p>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={projectPickerOpen}
@@ -593,7 +682,7 @@ function BrollCard({
 
   return (
     <div
-      className="group relative overflow-hidden rounded-md border border-border bg-card shadow-sm transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 text-left"
+      className="group relative overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 text-left"
       onMouseEnter={() => {
         if (item.type !== 'video') return;
         if (hoverTimerRef.current !== null) window.clearTimeout(hoverTimerRef.current);
@@ -609,17 +698,33 @@ function BrollCard({
         setHovered(false);
       }}
     >
+      {/* ── Thumbnail ── */}
       <div className="relative aspect-video w-full overflow-hidden bg-muted">
         {thumb ? (
-          <img src={thumb} alt={item.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+          <img
+            src={thumb}
+            alt={item.name}
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          />
         ) : (
           <div className="absolute inset-0 grid place-items-center text-muted-foreground">
-            <div className="flex items-center gap-2 text-sm">
-              No thumbnail
+            <div className="flex flex-col items-center gap-2 text-sm">
+              <Play className="h-8 w-8 opacity-30" />
+              <span className="text-xs opacity-50">No thumbnail</span>
             </div>
           </div>
         )}
 
+        {/* Play badge — always visible on video items when not previewing */}
+        {item.type === 'video' && !hovered && thumb && (
+          <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-black/50 px-2 py-1 backdrop-blur-sm">
+            <Play className="h-3 w-3 fill-white text-white" />
+            <span className="text-[10px] font-medium text-white">Video</span>
+          </div>
+        )}
+
+        {/* Hover video preview */}
         {item.type === 'video' && hovered ? (
           <video
             ref={videoRef}
@@ -646,65 +751,38 @@ function BrollCard({
           </div>
         ) : null}
 
+        {/* Hover gradient + action buttons */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100" />
-
         <div className="absolute bottom-0 left-0 right-0 p-3 pointer-events-none opacity-0 translate-y-1 transition-all duration-200 group-hover:pointer-events-auto group-hover:opacity-100 group-hover:translate-y-0 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-focus-within:translate-y-0">
-          <div className="flex items-end justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-sm font-semibold text-white truncate">{item.name}</div>
-              {item.description ? (
-                <div className="mt-0.5 text-xs text-white/75 line-clamp-2">{item.description}</div>
-              ) : (
-                <div className="mt-0.5 text-xs text-white/60"> </div>
-              )}
-            </div>
-            <div className="shrink-0 flex items-center gap-2">
-              <button
-                type="button"
-                className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-black/45 px-3 py-1.5 text-[11px] text-white/90 backdrop-blur-sm transition-colors hover:bg-black/55 disabled:cursor-not-allowed disabled:opacity-70"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onDownload();
-                }}
-                disabled={downloading || importing}
-                title={`Download "${item.name}"`}
-              >
-                {downloading ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Downloading…
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-3.5 w-3.5" />
-                    Download
-                  </>
-                )}
-              </button>
-              <button
-                type="button"
-                className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-black/45 px-3 py-1.5 text-[11px] text-white/90 backdrop-blur-sm transition-colors hover:bg-black/55 disabled:cursor-not-allowed disabled:opacity-70"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onImport();
-                }}
-                disabled={importing || downloading}
-                title={`Import "${item.name}" to a project`}
-              >
-                {importing ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Importing…
-                  </>
-                ) : (
-                  'Import'
-                )}
-              </button>
-            </div>
+          <div className="flex items-end justify-end gap-2">
+            <button
+              type="button"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-black/50 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/65 disabled:cursor-not-allowed disabled:opacity-70"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDownload(); }}
+              disabled={downloading || importing}
+              title={`Download "${item.name}"`}
+            >
+              {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+              {downloading ? 'Downloading…' : 'Download'}
+            </button>
+            <button
+              type="button"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[11px] font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onImport(); }}
+              disabled={importing || downloading}
+              title={`Import "${item.name}" to a project`}
+            >
+              {importing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+              {importing ? 'Importing…' : 'Import'}
+            </button>
           </div>
         </div>
+      </div>
+
+      {/* ── Persistent label below thumbnail ── */}
+      <div className="px-3 py-2.5">
+        <p className="truncate text-sm font-medium leading-snug text-foreground">{item.name}</p>
+        <p className="mt-0.5 truncate text-xs text-muted-foreground">{item.__subcategoryName}</p>
       </div>
     </div>
   );
