@@ -152,7 +152,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
       return;
     }
 
-    if (!isLoading) setProjectPickerOpen(true);
+    // if (!isLoading) setProjectPickerOpen(true);
   }, [currentProject?.id, fixedProjectId, isLoading, projects, selectedProjectId]);
 
   const projectName = useMemo(() => {
