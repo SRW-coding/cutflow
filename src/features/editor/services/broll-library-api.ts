@@ -63,10 +63,19 @@ function normalizeAssetUrl(assetUrl: string): string {
   return `${origin}/${assetUrl}`;
 }
 
+// Module-level in-memory cache: survives navigation within the same tab session.
+let _libraryCache: BrollCategory[] | null = null;
+let _libraryCacheAt = 0;
+const LIBRARY_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 /**
  * GET /brolls/library — nested categories with subcategories and asset URLs.
  */
 export async function fetchBrollLibrary(): Promise<BrollCategory[]> {
+  if (_libraryCache && Date.now() - _libraryCacheAt < LIBRARY_CACHE_TTL_MS) {
+    return _libraryCache;
+  }
+
   const url = `${getApiRoot()}/brolls/library`;
   let res: Response;
   try {
@@ -107,7 +116,7 @@ export async function fetchBrollLibrary(): Promise<BrollCategory[]> {
 
   // Normalize possibly-relative asset URLs into absolute URLs for <video src> / fetch()
   const categories = data as BrollCategory[];
-  return categories.map((cat) => ({
+  const result = categories.map((cat) => ({
     ...cat,
     subcategories: (cat.subcategories ?? []).map((sub) => ({
       ...sub,
@@ -118,6 +127,10 @@ export async function fetchBrollLibrary(): Promise<BrollCategory[]> {
       })),
     })),
   }));
+
+  _libraryCache = result;
+  _libraryCacheAt = Date.now();
+  return result;
 }
 
 export function suggestedFileNameForBroll(name: string, assetUrl: string): string {

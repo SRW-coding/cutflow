@@ -63,14 +63,8 @@ function LoginPage() {
       <div className="mx-auto flex min-h-screen max-w-6xl items-center justify-center px-4 py-10">
         <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
           <div className="mb-6 flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <FreeCutLogo variant="icon" size="md" className="text-primary" />
-              <div>
-                <div className="text-base font-semibold leading-tight">CutFlow</div>
-                <div className="text-xs text-muted-foreground">Sign in</div>
-              </div>
-            </div>
-            <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
+            <FreeCutLogo variant="full" size="md" className="text-primary" />
+            <Link to="/" className="text-sm text-primary underline hover:text-primary/80">
               Back to home
             </Link>
           </div>
@@ -118,10 +112,9 @@ function LoginPage() {
               {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
             </div>
 
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Forgot your password?</span>
+            <div className="text-sm">
               <Link to="/forgot-password" className="font-medium text-primary hover:underline">
-                Reset
+                Forgot your password?
               </Link>
             </div>
 

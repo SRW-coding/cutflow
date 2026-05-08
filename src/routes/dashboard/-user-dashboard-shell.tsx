@@ -42,9 +42,8 @@ export function UserDashboardShell({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 shrink-0 text-primary" />
-                <h1 className="truncate text-sm font-semibold tracking-tight sm:text-base">Your workspace</h1>
+                <h1 className="truncate text-sm font-semibold tracking-tight sm:text-base">Dashboard</h1>
               </div>
-              <p className="truncate text-xs text-muted-foreground">Local projects — activity below is sample UI</p>
             </div>
           </div>
           <HeaderProfileMenu
@@ -64,8 +63,10 @@ export function UserDashboardShell({
               {ACCOUNT_NAV.map(({ to, label, icon: Icon, enabled }) => {
                 const active = enabled && to ? pathname === to || pathname.startsWith(`${to}/`) : false;
                 const itemClass = cn(
-                  'flex w-full items-center gap-2 px-4 py-3 text-sm transition-colors',
-                  active ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground',
+                  'flex w-full items-center gap-2 px-4 py-3 text-sm transition-colors border-l-2',
+                  active
+                    ? 'border-primary bg-primary/8 font-semibold text-foreground'
+                    : 'border-transparent text-muted-foreground',
                   enabled ? 'hover:bg-muted/70 hover:text-foreground' : 'opacity-60'
                 );
 

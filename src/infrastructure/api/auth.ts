@@ -25,8 +25,13 @@ export interface AuthResponse {
   tokens: AuthTokens;
 }
 
+export interface RegisterResponse {
+  requiresVerification: true;
+  email: string;
+}
+
 export const authApi = {
-  register(data: { name: string; email: string; password: string }): Promise<AuthResponse> {
+  register(data: { name: string; email: string; password: string }): Promise<RegisterResponse> {
     return api.post('/auth/register', data);
   },
 
@@ -56,5 +61,13 @@ export const authApi = {
 
   resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
     return api.post('/auth/reset-password', { token, newPassword });
+  },
+
+  verifyEmailOtp(email: string, otp: string): Promise<AuthResponse> {
+    return api.post('/auth/verify-email', { email, otp });
+  },
+
+  resendVerificationOtp(email: string): Promise<{ message: string }> {
+    return api.post('/auth/resend-verification', { email });
   },
 };

@@ -19,7 +19,7 @@ export const Route = createFileRoute('/dashboard/profile')({
 function DetailsRow({
   label,
   value,
-  actionLabel = 'Edit',
+  actionLabel,
 }: {
   label: string;
   value: string;
@@ -31,15 +31,15 @@ function DetailsRow({
         <div className="text-[11px] font-medium text-muted-foreground">{label}</div>
         <div className="mt-1 truncate text-sm text-foreground">{value}</div>
       </div>
-      <button
-        type="button"
-        className="shrink-0 text-xs font-medium text-primary hover:underline"
-        onClick={() => {
-          // design-only
-        }}
-      >
-        {actionLabel}
-      </button>
+      {actionLabel && (
+        <button
+          type="button"
+          className="shrink-0 text-xs font-medium text-primary hover:underline"
+          onClick={() => {}}
+        >
+          {actionLabel}
+        </button>
+      )}
     </div>
   );
 }
@@ -68,11 +68,11 @@ function UserProfilePage() {
           <Separator />
           <DetailsRow label="User ID" value={user?.id ?? '—'} actionLabel="Copy" />
           <Separator />
-          <DetailsRow label="User Name" value={userName} actionLabel="Edit" />
+          <DetailsRow label="User Name" value={userName} />
           <Separator />
           <DetailsRow label="Password" value="••••••••••••" actionLabel="Change" />
           <Separator />
-          <DetailsRow label="E-mail" value={user?.email ?? '—'} actionLabel="Edit" />
+          <DetailsRow label="E-mail" value={user?.email ?? '—'} />
         </div>
       </section>
 

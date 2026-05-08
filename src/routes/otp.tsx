@@ -6,10 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { authApi } from '@/infrastructure/api/auth';
+import { useAuthStore } from '@/stores/auth-store';
 
 export const Route = createFileRoute('/otp')({
   validateSearch: (search: Record<string, unknown>) => ({
     email: typeof search.email === 'string' ? search.email : '',
+    mode: search.mode === 'signup' ? ('signup' as const) : ('reset' as const),
+    redirect: typeof search.redirect === 'string' ? search.redirect : undefined,
   }),
   component: OtpPage,
 });
@@ -20,7 +23,8 @@ function normalizeOtp(value: string): string {
 
 function OtpPage() {
   const navigate = useNavigate();
-  const { email } = Route.useSearch();
+  const { email, mode, redirect } = Route.useSearch();
+  const setAuth = useAuthStore((s) => s.setAuth);
 
   const [otp, setOtp] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -40,8 +44,14 @@ function OtpPage() {
     if (!canSubmit) return;
     setSubmitting(true);
     try {
-      const { resetToken } = await authApi.verifyOtp(email, otp);
-      await navigate({ to: '/reset-password', search: { email, token: resetToken } });
+      if (mode === 'signup') {
+        const res = await authApi.verifyEmailOtp(email, otp);
+        setAuth(res.user, res.tokens);
+        await navigate({ to: (redirect as never) || '/projects' });
+      } else {
+        const { resetToken } = await authApi.verifyOtp(email, otp);
+        await navigate({ to: '/reset-password', search: { email, token: resetToken } });
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Invalid code';
       toast.error(msg);
@@ -54,37 +64,41 @@ function OtpPage() {
     if (submitting) return;
     setSubmitting(true);
     try {
-      await authApi.forgotPassword(email);
+      if (mode === 'signup') {
+        await authApi.resendVerificationOtp(email);
+      } else {
+        await authApi.forgotPassword(email);
+      }
       setResent(true);
       setOtp('');
       inputRef.current?.focus();
       setTimeout(() => setResent(false), 2500);
     } catch {
-      // fail silently — don't reveal whether email exists
+      // fail silently
     } finally {
       setSubmitting(false);
     }
   };
+
+  const backLink = mode === 'signup'
+    ? <Link to="/signup" className="font-medium text-primary hover:underline">Back to sign up</Link>
+    : <Link to="/forgot-password" className="font-medium text-primary hover:underline">Use a different email</Link>;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="mx-auto flex min-h-screen max-w-6xl items-center justify-center px-4 py-10">
         <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
           <div className="mb-6 flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <FreeCutLogo variant="icon" size="md" className="text-primary" />
-              <div>
-                <div className="text-base font-semibold leading-tight">CutFlow</div>
-                <div className="text-xs text-muted-foreground">Verify code</div>
-              </div>
-            </div>
-            <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
+            <FreeCutLogo variant="full" size="md" className="text-primary" />
+            <Link to="/" className="text-sm text-primary underline hover:text-primary/80">
               Back to home
             </Link>
           </div>
 
           <div className="mb-6">
-            <h2 className="text-2xl font-semibold tracking-tight">Enter verification code</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">
+              {mode === 'signup' ? 'Verify your email' : 'Enter verification code'}
+            </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               {email
                 ? <>We sent a 6-digit code to <span className="font-medium text-foreground">{email}</span>.</>
@@ -109,7 +123,7 @@ function OtpPage() {
             </div>
 
             <Button type="submit" className="w-full" disabled={!canSubmit}>
-              {submitting ? 'Verifying…' : 'Verify'}
+              {submitting ? 'Verifying…' : mode === 'signup' ? 'Verify & Continue' : 'Verify'}
             </Button>
 
             <div className="flex items-center justify-between text-sm">
@@ -121,15 +135,11 @@ function OtpPage() {
               >
                 Resend code
               </button>
-              <Link to="/forgot-password" className="font-medium text-primary hover:underline">
-                Use a different email
-              </Link>
+              {backLink}
             </div>
-
           </form>
         </div>
       </div>
     </div>
   );
 }
-

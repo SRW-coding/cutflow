@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Download, LayoutDashboard, Loader2, LogOut, Play, Search, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, LayoutDashboard, LayoutGrid, Loader2, LogOut, Play, Search, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { FreeCutLogo } from '@/components/brand/freecut-logo';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,6 @@ import {
   suggestedFileNameForBroll,
   type BrollLibraryItem,
 } from '@/features/brolls/deps/broll-library-api';
-import { mediaLibraryService } from '@/features/brolls/deps/media-library';
 import { useProjectStore } from '@/features/brolls/deps/projects';
 import {
   Dialog,
@@ -66,7 +65,6 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<BrollItemWithMeta[]>([]);
-  const [importingKey, setImportingKey] = useState<string | null>(null);
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
   const [guestPromptOpen, setGuestPromptOpen] = useState(false);
   const [guestDownloads, setGuestDownloads] = useState<number>(
@@ -77,15 +75,16 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   const [categories, setCategories] = useState<Array<{ id: number; name: string; thumbnailUrl: string | null }>>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | 'all'>('all');
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<number | 'all' | 'ai' | 'general'>('all');
-  const heroVideos = useMemo(
-    () => [
-      '/assets/hero/0109-53-3banec400z_1080__D.mp4',
-      '/assets/hero/66b22d2406b4320c51ed519e-lpt-sbpbxg_1080__D.mp4',
-      '/assets/hero/sunny-view-of-miami-beach-florida-usa-on-hot-day-2025-08-29-02-31-26-utc-r6hjf3xm43_1080__D.mp4',
-    ],
-    []
-  );
   const [heroIndex, setHeroIndex] = useState(0);
+
+  const heroVideos = useMemo(() => {
+    const vids = items.filter((it) => it.type === 'video' && Boolean(it.url));
+    if (!vids.length) return [];
+    const step = Math.max(1, Math.floor(vids.length / 3));
+    return ([vids[0], vids[step], vids[step * 2]] as typeof vids)
+      .filter((v): v is typeof vids[0] => Boolean(v?.url))
+      .map((v) => v.url);
+  }, [items]);
 
   const projects = useProjectStore((s) => s.projects);
   const currentProject = useProjectStore((s) => s.currentProject);
@@ -206,45 +205,6 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
     return filtered.slice(start, start + pageSize);
   }, [filtered, page, pageSize]);
 
-  const startImport = async (item: BrollLibraryItem) => {
-    if (!isAuthenticated) {
-      setGuestPromptOpen(true);
-      return;
-    }
-
-    const projectId = effectiveProjectId;
-    if (!projectId) {
-      setProjectPickerOpen(true);
-      return;
-    }
-
-    const key = String(item.id);
-    setImportingKey(key);
-    try {
-      const res = await fetch(item.url, { mode: 'cors', credentials: 'omit' });
-      if (!res.ok) throw new Error(`Download failed (${res.status})`);
-      const blob = await res.blob();
-      const fileName = suggestedFileNameForBroll(item.name, item.url);
-      const mime = blob.type || (item.type === 'video' ? 'video/mp4' : 'image/jpeg');
-      const file = new File([blob], fileName, { type: mime });
-
-      const meta = await mediaLibraryService.importMediaFromFile(file, projectId, {
-        tags: ['b-roll'],
-      });
-
-      if (meta.isDuplicate) {
-        toast.info('Already in project media', { description: `"${meta.fileName}" is already in "${projectName ?? 'project'}".` });
-      } else {
-        toast.success('Imported to project media', { description: `"${meta.fileName}" added to "${projectName ?? 'project'}".` });
-      }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Import failed.';
-      toast.error('Import failed', { description: msg });
-    } finally {
-      setImportingKey(null);
-    }
-  };
-
   const startDownload = async (item: BrollLibraryItem) => {
     if (!isAuthenticated && guestDownloads >= GUEST_DOWNLOAD_LIMIT) {
       setGuestPromptOpen(true);
@@ -291,7 +251,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
               <FreeCutLogo variant="full" size="md" className="hover:opacity-80 transition-opacity" />
             </Link>
             <div className="min-w-0">
-              <div className="text-sm font-semibold text-foreground truncate">B-roll Library</div>
+              <div className="text-sm font-semibold text-foreground truncate">CutFlow Video Library</div>
               <div className="text-xs text-muted-foreground truncate">
                 {projectName ? `Importing into: ${projectName}` : 'Choose a project to import into'}
               </div>
@@ -312,15 +272,9 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
                     Choose Project
                   </Button>
                 )}
-                {effectiveProjectId ? (
-                  <Link to="/editor/$projectId" params={{ projectId: effectiveProjectId }}>
-                    <Button variant="outline" size="sm">Return to Editor</Button>
-                  </Link>
-                ) : (
-                  <Link to="/projects">
-                    <Button variant="outline" size="sm">My Projects</Button>
-                  </Link>
-                )}
+                <Link to="/projects">
+                  <Button variant="outline" size="sm">My Projects</Button>
+                </Link>
                 <div className="ml-1 flex items-center gap-2 border-l border-border pl-3">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
                     {user?.firstName?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? <User className="h-4 w-4" />}
@@ -355,18 +309,22 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
 
       <div className="relative h-[420px] overflow-hidden border-b border-border bg-card/30">
         <div className="absolute inset-0 overflow-hidden">
-          <video
-            key={heroVideos[heroIndex]}
-            className="h-full w-full object-cover"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            aria-hidden="true"
-          >
-            <source src={heroVideos[heroIndex]} type="video/mp4" />
-          </video>
+          {/* gradient shown while library loads or as fallback when no videos available */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background/60 to-background/90" />
+          {heroVideos.length > 0 && heroVideos[heroIndex % heroVideos.length] && (
+            <video
+              key={heroVideos[heroIndex % heroVideos.length]}
+              className="absolute inset-0 h-full w-full object-cover"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              aria-hidden="true"
+            >
+              <source src={heroVideos[heroIndex % heroVideos.length]} type="video/mp4" />
+            </video>
+          )}
           <div className="absolute inset-0 bg-background/20 backdrop-blur-[1px]" />
         </div>
         <div className="relative mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8">
@@ -400,8 +358,19 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
               </Button>
             </div>
           </div>
-          <div className="mt-3 text-center text-xs text-white/80">
-            {isLoading ? 'Loading b-roll…' : `${filtered.length.toLocaleString()} results`}
+          <div className="mt-3 flex items-center justify-center gap-3">
+            <span className="text-xs text-white/80">
+              {isLoading ? 'Loading b-roll…' : `${filtered.length.toLocaleString()} results`}
+            </span>
+            {(query || selectedCategoryId !== 'all' || selectedSubcategoryId !== 'all') && !isLoading && (
+              <button
+                type="button"
+                onClick={() => { setQuery(''); setSelectedCategoryId('all'); setSelectedSubcategoryId('all'); setPage(1); }}
+                className="text-xs font-medium text-white/70 underline hover:text-white"
+              >
+                Reset filters
+              </button>
+            )}
           </div>
 
           {!isLoading && categories.length ? (
@@ -416,15 +385,8 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
                     selectedCategoryId === 'all' ? 'bg-white/10 ring-1 ring-primary/40' : 'ring-1 ring-transparent',
                   ].join(' ')}
                 >
-                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md bg-muted/60">
-                    {categories.find((c) => Boolean(c.thumbnailUrl))?.thumbnailUrl ? (
-                      <img
-                        src={categories.find((c) => Boolean(c.thumbnailUrl))?.thumbnailUrl ?? ''}
-                        alt=""
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                      />
-                    ) : null}
+                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md bg-white/10 grid place-items-center">
+                    <LayoutGrid className="h-7 w-7 text-white/80" />
                   </div>
                   <div className="min-w-0">
                     <div className="truncate text-sm font-semibold">All</div>
@@ -488,9 +450,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
               <BrollCard
                 key={it.id}
                 item={it}
-                importing={importingKey === String(it.id)}
                 downloading={downloadingKey === String(it.id)}
-                onImport={() => void startImport(it)}
                 onDownload={() => void startDownload(it)}
               />
             ))}
@@ -588,15 +548,15 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
           setProjectPickerOpen(open);
         }}
       >
-        <DialogContent className="max-w-md" hideCloseButton={Boolean(fixedProjectId) || importingKey !== null}>
+        <DialogContent className="max-w-md" hideCloseButton={Boolean(fixedProjectId)}>
           <DialogHeader>
             <DialogTitle>Select project</DialogTitle>
-            <DialogDescription>Pick which project should receive imported b-roll.</DialogDescription>
+            <DialogDescription>Pick a project to work with.</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2">
             <div className="text-sm font-medium">Project</div>
-            <Select value={selectedProjectId} onValueChange={setSelectedProjectId} disabled={importingKey !== null}>
+            <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
               <SelectTrigger>
                 <SelectValue placeholder={projects.length ? 'Select a project…' : 'No projects available'} />
               </SelectTrigger>
@@ -632,15 +592,11 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
 
 function BrollCard({
   item,
-  importing,
   downloading,
-  onImport,
   onDownload,
 }: {
   item: BrollItemWithMeta;
-  importing: boolean;
   downloading: boolean;
-  onImport: () => void;
   onDownload: () => void;
 }) {
   const thumb = item.thumbnail_url || (item.type === 'image' ? item.url : null);
@@ -759,21 +715,11 @@ function BrollCard({
               type="button"
               className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-black/50 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/65 disabled:cursor-not-allowed disabled:opacity-70"
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDownload(); }}
-              disabled={downloading || importing}
+              disabled={downloading}
               title={`Download "${item.name}"`}
             >
               {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
               {downloading ? 'Downloading…' : 'Download'}
-            </button>
-            <button
-              type="button"
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[11px] font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onImport(); }}
-              disabled={importing || downloading}
-              title={`Import "${item.name}" to a project`}
-            >
-              {importing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-              {importing ? 'Importing…' : 'Import'}
             </button>
           </div>
         </div>
