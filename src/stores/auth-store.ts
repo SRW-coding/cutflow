@@ -10,6 +10,7 @@ interface AuthState {
 
 interface AuthActions {
   setAuth: (user: AuthUser, tokens: AuthTokens) => void;
+  updateUser: (patch: Partial<AuthUser>) => void;
   clearAuth: () => void;
   refreshSession: () => Promise<boolean>;
   loadFromStorage: () => void;
@@ -34,6 +35,10 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, get) => ({
   setAuth(user, tokens) {
     saveTokens(tokens);
     set({ user, tokens, isAuthenticated: true });
+  },
+
+  updateUser(patch) {
+    set((s) => ({ user: s.user ? { ...s.user, ...patch } : s.user }));
   },
 
   clearAuth() {

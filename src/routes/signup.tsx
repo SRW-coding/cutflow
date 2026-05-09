@@ -60,10 +60,9 @@ function SignupPage() {
     setSubmitting(true);
     try {
       await authApi.register({ name: name.trim(), email, password });
-      await navigate({
-        to: '/otp',
-        search: { email, mode: 'signup', ...(redirect ? { redirect } : {}) },
-      });
+      // OTP routing temporarily disabled — go straight to login
+      toast.success('Account created! Please sign in.');
+      await navigate({ to: '/login', search: redirect ? { redirect } : {} });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Registration failed';
       toast.error(msg);
