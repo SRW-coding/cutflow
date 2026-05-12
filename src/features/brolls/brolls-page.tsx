@@ -267,14 +267,6 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
                     Dashboard
                   </Button>
                 </Link>
-                {!fixedProjectId && (
-                  <Button variant="outline" size="sm" onClick={() => setProjectPickerOpen(true)}>
-                    Choose Project
-                  </Button>
-                )}
-                <Link to="/projects">
-                  <Button variant="outline" size="sm">My Projects</Button>
-                </Link>
                 <div className="ml-1 flex items-center gap-2 border-l border-border pl-3">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
                     {user?.firstName?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? <User className="h-4 w-4" />}
@@ -602,30 +594,64 @@ function BrollCard({
   const thumb = item.thumbnail_url || (item.type === 'image' ? item.url : null);
   const [hovered, setHovered] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hoverTimerRef = useRef<number | null>(null);
+  const fetchAbortRef = useRef<AbortController | null>(null);
+  const blobUrlRef = useRef<string | null>(null);
 
+  // Fetch first 3 MB chunk on hover for fast preview start
   useEffect(() => {
-    if (item.type !== 'video') return;
-    const v = videoRef.current;
-    if (!v) return;
-
-    if (!hovered) {
-      try {
-        v.pause();
-        v.currentTime = 0;
-      } catch {
-        /* ignore */
-      }
-      setPreviewLoading(false);
-      return;
-    }
+    if (!hovered || item.type !== 'video') return;
 
     setPreviewLoading(true);
-    void v.play().catch(() => {
-      // Autoplay might be blocked; keep thumbnail.
-    });
-  }, [hovered, item.type]);
+    if (fetchAbortRef.current) fetchAbortRef.current.abort();
+    const controller = new AbortController();
+    fetchAbortRef.current = controller;
+
+    const INITIAL_CHUNK = 3 * 1024 * 1024;
+
+    fetch(item.url, {
+      headers: { Range: `bytes=0-${INITIAL_CHUNK - 1}` },
+      signal: controller.signal,
+      mode: 'cors',
+      credentials: 'omit',
+    })
+      .then((res) => res.blob())
+      .then((blob) => {
+        if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+        const url = URL.createObjectURL(blob);
+        blobUrlRef.current = url;
+        setPreviewSrc(url);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setPreviewSrc(item.url);
+      });
+
+    return () => controller.abort();
+  }, [hovered, item.type, item.url]);
+
+  // Play once the blob src is ready
+  useEffect(() => {
+    if (item.type !== 'video' || !hovered || !previewSrc) return;
+    const v = videoRef.current;
+    if (!v) return;
+    void v.play().catch(() => {});
+  }, [hovered, previewSrc, item.type]);
+
+  // Cleanup when un-hovered
+  useEffect(() => {
+    if (hovered) return;
+    if (fetchAbortRef.current) { fetchAbortRef.current.abort(); fetchAbortRef.current = null; }
+    if (blobUrlRef.current) { URL.revokeObjectURL(blobUrlRef.current); blobUrlRef.current = null; }
+    setPreviewSrc(null);
+    setPreviewLoading(false);
+  }, [hovered]);
+
+  // Revoke blob URL on unmount
+  useEffect(() => () => {
+    if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -680,19 +706,18 @@ function BrollCard({
           </div>
         )}
 
-        {/* Hover video preview */}
-        {item.type === 'video' && hovered ? (
+        {/* Hover video preview — plays from the first 3 MB chunk */}
+        {item.type === 'video' && hovered && previewSrc ? (
           <video
             ref={videoRef}
             className="absolute inset-0 h-full w-full object-cover"
-            src={item.url}
+            src={previewSrc}
             muted
             playsInline
             loop
-            preload="none"
+            preload="auto"
             controls={false}
             aria-hidden="true"
-            onLoadStart={() => setPreviewLoading(true)}
             onCanPlay={() => setPreviewLoading(false)}
             onPlaying={() => setPreviewLoading(false)}
           />

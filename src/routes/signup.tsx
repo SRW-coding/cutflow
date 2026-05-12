@@ -88,7 +88,7 @@ function SignupPage() {
               <Input
                 id="signup-name"
                 autoComplete="name"
-                placeholder="Wahib"
+                placeholder="John Doe"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
