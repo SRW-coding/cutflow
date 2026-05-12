@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Download, LayoutDashboard, LayoutGrid, Loader2, LogOut, Play, Search, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { FreeCutLogo } from '@/components/brand/freecut-logo';
@@ -61,6 +61,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   };
 
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [searchKind, setSearchKind] = useState<'videos'>('videos');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +77,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | 'all'>('all');
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<number | 'all' | 'ai' | 'general'>('all');
   const [heroIndex, setHeroIndex] = useState(0);
+  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
 
   const heroVideos = useMemo(() => {
     const vids = items.filter((it) => it.type === 'video' && Boolean(it.url));
@@ -161,7 +163,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   }, [effectiveProjectId, projects]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = debouncedQuery.trim().toLowerCase();
     return items.filter((it) => {
       if (selectedCategoryId !== 'all' && it.__categoryId !== selectedCategoryId) return false;
       if (selectedSubcategoryId === 'ai') {
@@ -181,9 +183,15 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   const [pageSize, setPageSize] = useState<15 | 30 | 60>(30);
   const pageCount = useMemo(() => Math.max(1, Math.ceil(filtered.length / pageSize)), [filtered.length, pageSize]);
 
+  // 300 ms debounce on search so filtering doesn't run on every keystroke
+  useEffect(() => {
+    const id = window.setTimeout(() => setDebouncedQuery(query), 300);
+    return () => window.clearTimeout(id);
+  }, [query]);
+
   useEffect(() => {
     setPage(1);
-  }, [query, selectedCategoryId]);
+  }, [debouncedQuery, selectedCategoryId]);
 
   useEffect(() => {
     setSelectedSubcategoryId('all');
@@ -200,12 +208,27 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
     return () => window.clearInterval(id);
   }, [heroVideos.length]);
 
+  // Imperatively update hero video src to avoid re-mounting the element on each rotation
+  useEffect(() => {
+    if (!heroVideos.length) return;
+    const src = heroVideos[heroIndex % heroVideos.length];
+    if (!src) return;
+    const v = heroVideoRef.current;
+    if (!v) return;
+    if (v.getAttribute('data-src') === src) return;
+    v.setAttribute('data-src', src);
+    v.pause();
+    v.src = src;
+    v.load();
+    void v.play().catch(() => {});
+  }, [heroIndex, heroVideos]);
+
   const pageItems = useMemo(() => {
     const start = (page - 1) * pageSize;
     return filtered.slice(start, start + pageSize);
   }, [filtered, page, pageSize]);
 
-  const startDownload = async (item: BrollLibraryItem) => {
+  const startDownload = useCallback(async (item: BrollLibraryItem) => {
     if (!isAuthenticated && guestDownloads >= GUEST_DOWNLOAD_LIMIT) {
       setGuestPromptOpen(true);
       return;
@@ -240,7 +263,11 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
     } finally {
       setDownloadingKey(null);
     }
-  };
+  }, [isAuthenticated, guestDownloads, GUEST_DOWNLOAD_LIMIT]);
+
+  const handleDownload = useCallback((item: BrollItemWithMeta) => {
+    void startDownload(item);
+  }, [startDownload]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -303,19 +330,16 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
         <div className="absolute inset-0 overflow-hidden">
           {/* gradient shown while library loads or as fallback when no videos available */}
           <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background/60 to-background/90" />
-          {heroVideos.length > 0 && heroVideos[heroIndex % heroVideos.length] && (
+          {heroVideos.length > 0 && (
             <video
-              key={heroVideos[heroIndex % heroVideos.length]}
+              ref={heroVideoRef}
               className="absolute inset-0 h-full w-full object-cover"
-              autoPlay
               muted
               loop
               playsInline
-              preload="metadata"
+              preload="none"
               aria-hidden="true"
-            >
-              <source src={heroVideos[heroIndex % heroVideos.length]} type="video/mp4" />
-            </video>
+            />
           )}
           <div className="absolute inset-0 bg-background/20 backdrop-blur-[1px]" />
         </div>
@@ -443,7 +467,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
                 key={it.id}
                 item={it}
                 downloading={downloadingKey === String(it.id)}
-                onDownload={() => void startDownload(it)}
+                onDownload={handleDownload}
               />
             ))}
             </div>
@@ -582,14 +606,14 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   );
 }
 
-function BrollCard({
+const BrollCard = memo(function BrollCard({
   item,
   downloading,
   onDownload,
 }: {
   item: BrollItemWithMeta;
   downloading: boolean;
-  onDownload: () => void;
+  onDownload: (item: BrollItemWithMeta) => void;
 }) {
   const thumb = item.thumbnail_url || (item.type === 'image' ? item.url : null);
   const [hovered, setHovered] = useState(false);
@@ -739,7 +763,7 @@ function BrollCard({
             <button
               type="button"
               className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-black/50 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/65 disabled:cursor-not-allowed disabled:opacity-70"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDownload(); }}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDownload(item); }}
               disabled={downloading}
               title={`Download "${item.name}"`}
             >
@@ -757,7 +781,7 @@ function BrollCard({
       </div>
     </div>
   );
-}
+});
 
 function BrollGridSkeleton() {
   const tiles = Array.from({ length: 12 });
