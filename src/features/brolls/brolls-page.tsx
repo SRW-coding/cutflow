@@ -60,6 +60,9 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
     toast.success('Signed out');
   };
 
+  // ✅ FIX #2 — Hero video defer state
+  const [heroReady, setHeroReady] = useState(false);
+
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [searchKind, setSearchKind] = useState<'videos'>('videos');
@@ -79,14 +82,16 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   const [heroIndex, setHeroIndex] = useState(0);
   const heroVideoRef = useRef<HTMLVideoElement | null>(null);
 
+  // ✅ FIX #2 — heroReady guard: hero video tab tak nahi chalega jab tak grid load na ho
   const heroVideos = useMemo(() => {
+    if (!heroReady || !items.length) return [];
     const vids = items.filter((it) => it.type === 'video' && Boolean(it.url));
     if (!vids.length) return [];
     const step = Math.max(1, Math.floor(vids.length / 3));
     return ([vids[0], vids[step], vids[step * 2]] as typeof vids)
       .filter((v): v is typeof vids[0] => Boolean(v?.url))
       .map((v) => v.url);
-  }, [items]);
+  }, [heroReady, items]);
 
   const projects = useProjectStore((s) => s.projects);
   const currentProject = useProjectStore((s) => s.currentProject);
@@ -104,8 +109,9 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
       setIsLoading(true);
       setError(null);
       try {
-        await loadProjects();
-        const lib = await fetchBrollLibrary();
+        // ✅ FIX #1 — Parallel loading: pehle sequential tha, ab dono saath chalte hain
+        const [lib] = await Promise.all([fetchBrollLibrary(), loadProjects()]);
+
         setCategories(
           (lib ?? []).map((c) => {
             const firstThumb =
@@ -128,7 +134,13 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
           }
         }
         shuffleInPlace(flat);
-        if (!cancelled) setItems(flat);
+        if (!cancelled) {
+          setItems(flat);
+          // ✅ FIX #2 — Hero video 2 second baad shuru hoga taake grid pehle load ho sake
+          window.setTimeout(() => {
+            if (!cancelled) setHeroReady(true);
+          }, 2000);
+        }
       } catch (e) {
         const message = e instanceof Error ? e.message : 'Failed to load b-roll library.';
         if (!cancelled) setError(message);
@@ -152,9 +164,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
       setSelectedProjectId(preferred);
       return;
     }
-
-    // if (!isLoading) setProjectPickerOpen(true);
-  }, [currentProject?.id, fixedProjectId, isLoading, projects, selectedProjectId]);
+  }, [currentProject?.id, fixedProjectId, projects, selectedProjectId]);
 
   const projectName = useMemo(() => {
     const pid = effectiveProjectId;
@@ -162,6 +172,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
     return projects.find((p) => p.id === pid)?.name ?? null;
   }, [effectiveProjectId, projects]);
 
+  // ✅ FIX #6 — debouncedQuery use karo dependency mein, query nahi
   const filtered = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
     return items.filter((it) => {
@@ -177,13 +188,12 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
       const hay = `${it.name ?? ''} ${it.description ?? ''}`.toLowerCase();
       return hay.includes(q);
     });
-  }, [items, query, selectedCategoryId, selectedSubcategoryId]);
+  }, [items, debouncedQuery, selectedCategoryId, selectedSubcategoryId]);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<15 | 30 | 60>(30);
   const pageCount = useMemo(() => Math.max(1, Math.ceil(filtered.length / pageSize)), [filtered.length, pageSize]);
 
-  // 300 ms debounce on search so filtering doesn't run on every keystroke
   useEffect(() => {
     const id = window.setTimeout(() => setDebouncedQuery(query), 300);
     return () => window.clearTimeout(id);
@@ -208,7 +218,6 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
     return () => window.clearInterval(id);
   }, [heroVideos.length]);
 
-  // Imperatively update hero video src to avoid re-mounting the element on each rotation
   useEffect(() => {
     if (!heroVideos.length) return;
     const src = heroVideos[heroIndex % heroVideos.length];
@@ -328,9 +337,9 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
 
       <div className="relative h-[420px] overflow-hidden border-b border-border bg-card/30">
         <div className="absolute inset-0 overflow-hidden">
-          {/* gradient shown while library loads or as fallback when no videos available */}
           <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background/60 to-background/90" />
-          {heroVideos.length > 0 && (
+          {/* ✅ FIX #2 — heroReady AND heroVideos.length dono check: tab tak video mount nahi hogi */}
+          {heroReady && heroVideos.length > 0 && (
             <video
               ref={heroVideoRef}
               className="absolute inset-0 h-full w-full object-cover"
@@ -438,7 +447,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
         {error && (
           <div className="max-w-3xl mx-auto mb-8">
             <Alert variant="destructive">
-              <div className="font-semibold leading-none tracking-tight">Couldn’t load b-roll</div>
+              <div className="font-semibold leading-none tracking-tight">Couldn't load b-roll</div>
               <AlertDescription className="mt-2">{error}</AlertDescription>
             </Alert>
           </div>
@@ -463,13 +472,13 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
             />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
               {pageItems.map((it) => (
-              <BrollCard
-                key={it.id}
-                item={it}
-                downloading={downloadingKey === String(it.id)}
-                onDownload={handleDownload}
-              />
-            ))}
+                <BrollCard
+                  key={it.id}
+                  item={it}
+                  downloading={downloadingKey === String(it.id)}
+                  onDownload={handleDownload}
+                />
+              ))}
             </div>
 
             {pageCount > 1 ? (
@@ -606,6 +615,8 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   );
 }
 
+// ─── BrollCard ────────────────────────────────────────────────────────────────
+
 const BrollCard = memo(function BrollCard({
   item,
   downloading,
@@ -624,7 +635,11 @@ const BrollCard = memo(function BrollCard({
   const fetchAbortRef = useRef<AbortController | null>(null);
   const blobUrlRef = useRef<string | null>(null);
 
-  // Fetch first 3 MB chunk on hover for fast preview start
+  // ✅ FIX #3 — 3MB ki jagah 512KB: network zyada choke nahi hoga
+  // ✅ FIX #4 — 700ms ki jagah 1000ms: mouse accidentally guzre toh fetch na ho
+  const PREVIEW_CHUNK = 512 * 1024;
+  const HOVER_DELAY_MS = 1000;
+
   useEffect(() => {
     if (!hovered || item.type !== 'video') return;
 
@@ -633,10 +648,9 @@ const BrollCard = memo(function BrollCard({
     const controller = new AbortController();
     fetchAbortRef.current = controller;
 
-    const INITIAL_CHUNK = 3 * 1024 * 1024;
-
     fetch(item.url, {
-      headers: { Range: `bytes=0-${INITIAL_CHUNK - 1}` },
+      // ✅ FIX #3 — PREVIEW_CHUNK use karo
+      headers: { Range: `bytes=0-${PREVIEW_CHUNK - 1}` },
       signal: controller.signal,
       mode: 'cors',
       credentials: 'omit',
@@ -655,7 +669,6 @@ const BrollCard = memo(function BrollCard({
     return () => controller.abort();
   }, [hovered, item.type, item.url]);
 
-  // Play once the blob src is ready
   useEffect(() => {
     if (item.type !== 'video' || !hovered || !previewSrc) return;
     const v = videoRef.current;
@@ -663,7 +676,6 @@ const BrollCard = memo(function BrollCard({
     void v.play().catch(() => {});
   }, [hovered, previewSrc, item.type]);
 
-  // Cleanup when un-hovered
   useEffect(() => {
     if (hovered) return;
     if (fetchAbortRef.current) { fetchAbortRef.current.abort(); fetchAbortRef.current = null; }
@@ -672,7 +684,6 @@ const BrollCard = memo(function BrollCard({
     setPreviewLoading(false);
   }, [hovered]);
 
-  // Revoke blob URL on unmount
   useEffect(() => () => {
     if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
   }, []);
@@ -692,9 +703,10 @@ const BrollCard = memo(function BrollCard({
       onMouseEnter={() => {
         if (item.type !== 'video') return;
         if (hoverTimerRef.current !== null) window.clearTimeout(hoverTimerRef.current);
+        // ✅ FIX #4 — HOVER_DELAY_MS (1000ms)
         hoverTimerRef.current = window.setTimeout(() => {
           setHovered(true);
-        }, 700);
+        }, HOVER_DELAY_MS);
       }}
       onMouseLeave={() => {
         if (hoverTimerRef.current !== null) {
@@ -704,13 +716,13 @@ const BrollCard = memo(function BrollCard({
         setHovered(false);
       }}
     >
-      {/* ── Thumbnail ── */}
       <div className="relative aspect-video w-full overflow-hidden bg-muted">
         {thumb ? (
           <img
             src={thumb}
             alt={item.name}
             loading="lazy"
+            decoding="async"  // ✅ FIX #5 — main thread block nahi hoga decode karte waqt
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
           />
         ) : (
@@ -722,7 +734,6 @@ const BrollCard = memo(function BrollCard({
           </div>
         )}
 
-        {/* Play badge — always visible on video items when not previewing */}
         {item.type === 'video' && !hovered && thumb && (
           <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-black/50 px-2 py-1 backdrop-blur-sm">
             <Play className="h-3 w-3 fill-white text-white" />
@@ -730,7 +741,6 @@ const BrollCard = memo(function BrollCard({
           </div>
         )}
 
-        {/* Hover video preview — plays from the first 3 MB chunk */}
         {item.type === 'video' && hovered && previewSrc ? (
           <video
             ref={videoRef}
@@ -756,7 +766,6 @@ const BrollCard = memo(function BrollCard({
           </div>
         ) : null}
 
-        {/* Hover gradient + action buttons */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100" />
         <div className="absolute bottom-0 left-0 right-0 p-3 pointer-events-none opacity-0 translate-y-1 transition-all duration-200 group-hover:pointer-events-auto group-hover:opacity-100 group-hover:translate-y-0 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-focus-within:translate-y-0">
           <div className="flex items-end justify-end gap-2">
@@ -774,7 +783,6 @@ const BrollCard = memo(function BrollCard({
         </div>
       </div>
 
-      {/* ── Persistent label below thumbnail ── */}
       <div className="px-3 py-2.5">
         <p className="truncate text-sm font-medium leading-snug text-foreground">{item.name}</p>
         <p className="mt-0.5 truncate text-xs text-muted-foreground">{item.__subcategoryName}</p>
@@ -782,6 +790,8 @@ const BrollCard = memo(function BrollCard({
     </div>
   );
 });
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
 
 function BrollGridSkeleton() {
   const tiles = Array.from({ length: 12 });
@@ -803,6 +813,8 @@ function BrollGridSkeleton() {
     </div>
   );
 }
+
+// ─── SubcategoryFilters ───────────────────────────────────────────────────────
 
 function SubcategoryFilters({
   items,
@@ -894,4 +906,3 @@ function SubcategoryFilters({
     </div>
   );
 }
-
