@@ -733,8 +733,6 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
 // Fixed by converting the outer wrapper to a <div role="button"> so interactive
 // content can be legitimately nested inside it.
 
-const HOVER_PREVIEW_DELAY_MS = 1000;
-
 const BrollCard = memo(function BrollCard({
   item,
   downloading,
@@ -746,9 +744,8 @@ const BrollCard = memo(function BrollCard({
 }) {
   const thumb = item.thumbnail_url || (item.type === 'image' ? item.url : null);
 
-  // Hover-to-preview: after a 1s hover debounce, mount a <video> pointed at
-  // the full asset URL and let the browser handle progressive streaming via
-  // native byte-range requests.
+  // Hover-to-preview: mount a <video> pointed at the full asset URL and let
+  // the browser handle progressive streaming via native byte-range requests.
   const [hovered, setHovered] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   // Once the video starts playing we lock the spinner off — otherwise
@@ -757,7 +754,6 @@ const BrollCard = memo(function BrollCard({
   // and make it look like the video is perpetually loading instead of playing.
   const hasPlayedRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const hoverTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (item.type !== 'video' || !hovered) return;
@@ -777,33 +773,14 @@ const BrollCard = memo(function BrollCard({
     });
   }, [hovered, item.type]);
 
-  useEffect(
-    () => () => {
-      if (hoverTimerRef.current !== null) {
-        window.clearTimeout(hoverTimerRef.current);
-        hoverTimerRef.current = null;
-      }
-    },
-    [],
-  );
-
   return (
     <div
       className="group relative overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 text-left"
       onMouseEnter={() => {
         if (item.type !== 'video') return;
-        if (hoverTimerRef.current !== null) window.clearTimeout(hoverTimerRef.current);
-        hoverTimerRef.current = window.setTimeout(() => {
-          setHovered(true);
-        }, HOVER_PREVIEW_DELAY_MS);
+        setHovered(true);
       }}
-      onMouseLeave={() => {
-        if (hoverTimerRef.current !== null) {
-          window.clearTimeout(hoverTimerRef.current);
-          hoverTimerRef.current = null;
-        }
-        setHovered(false);
-      }}
+      onMouseLeave={() => setHovered(false)}
     >
       <div className="relative aspect-video w-full overflow-hidden bg-muted block">
         {thumb ? (
