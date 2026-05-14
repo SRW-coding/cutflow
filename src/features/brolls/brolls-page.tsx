@@ -906,40 +906,35 @@ const BrollCard = memo(function BrollCard({
 // ─── HeroVideo ────────────────────────────────────────────────────────────────
 // The hero video used to mount with `autoPlay`, which overrides `preload="none"`
 // and makes the browser start downloading video bytes alongside the library API.
-// We now defer mounting the <video> element entirely until the browser is idle
-// (or after a short fallback timeout), so the library fetch and first-page
-// thumbnails get the network to themselves on a cold load.
+// We now render the <video> element immediately (so it always appears in the
+// DOM) but defer playback: no `autoPlay`, `preload="none"`, and we only call
+// .play() after a short delay. That preserves the bandwidth saving of the
+// deferred-load idea without any way for the element to fail to appear in prod.
 
 function HeroVideo({ src }: { src: string }) {
-  const [mount, setMount] = useState(false);
+  const ref = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    const w = window as Window & {
-      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-    };
-    if (typeof w.requestIdleCallback === 'function') {
-      const id = w.requestIdleCallback(() => setMount(true), { timeout: 2000 });
-      return () => {
-        const cancel = (window as unknown as { cancelIdleCallback?: (id: number) => void })
-          .cancelIdleCallback;
-        if (typeof cancel === 'function') cancel(id);
-      };
-    }
-    const t = window.setTimeout(() => setMount(true), 1500);
+    const t = window.setTimeout(() => {
+      const v = ref.current;
+      if (!v) return;
+      // Muted + playsInline videos are allowed to play programmatically in all
+      // modern browsers. We swallow any rejection in case a browser policy
+      // blocks it — the visible poster frame is still there as a fallback.
+      void v.play().catch(() => {});
+    }, 1200);
     return () => window.clearTimeout(t);
   }, []);
 
-  if (!mount) return null;
-
   return (
     <video
+      ref={ref}
       className="absolute inset-0 h-full w-full object-cover"
       src={src}
       muted
       loop
-      autoPlay
       playsInline
-      preload="metadata"
+      preload="none"
       aria-hidden="true"
     />
   );
