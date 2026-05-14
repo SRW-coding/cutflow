@@ -43,7 +43,7 @@ import {
 import { useAuthStore } from '@/stores/auth-store';
 import { authApi } from '@/infrastructure/api/auth';
 
-const HERO_VIDEO_SRC = '/assets/hero/hero.mp4';
+const HERO_VIDEO_SRC = '../../../public/assets/hero/hero.mp4';
 
 type BrollItemWithMeta = BrollLibraryItem & {
   __categoryId: number;
