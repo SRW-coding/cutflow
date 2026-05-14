@@ -177,7 +177,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   const loadProjects = useProjectStore((s) => s.loadProjects);
 
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-  const effectiveProjectId = fixedProjectId || selectedProjectId;
+  // const effectiveProjectId = fixedProjectId || selectedProjectId;
 
   const [projectPickerOpen, setProjectPickerOpen] = useState(false);
 
