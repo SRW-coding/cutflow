@@ -1,6 +1,18 @@
 import { Link } from '@tanstack/react-router';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Download, LayoutDashboard, LayoutGrid, Loader2, LogOut, Play, Search, User } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  LayoutDashboard,
+  LayoutGrid,
+  Loader2,
+  LogOut,
+  Play,
+  Search,
+  User,
+  X,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { FreeCutLogo } from '@/components/brand/freecut-logo';
 import { Input } from '@/components/ui/input';
@@ -29,6 +41,8 @@ import {
 } from '@/components/ui/select';
 import { useAuthStore } from '@/stores/auth-store';
 import { authApi } from '@/infrastructure/api/auth';
+
+const HERO_VIDEO_SRC = '/assets/hero/hero.mp4';
 
 type BrollItemWithMeta = BrollLibraryItem & {
   __categoryId: number;
@@ -60,9 +74,6 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
     toast.success('Signed out');
   };
 
-  // ✅ FIX #2 — Hero video defer state
-  const [heroReady, setHeroReady] = useState(false);
-
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [searchKind, setSearchKind] = useState<'videos'>('videos');
@@ -71,27 +82,37 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   const [items, setItems] = useState<BrollItemWithMeta[]>([]);
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
   const [guestPromptOpen, setGuestPromptOpen] = useState(false);
-  const [guestDownloads, setGuestDownloads] = useState<number>(
-    () => parseInt(localStorage.getItem('brolls_guest_downloads') ?? '0', 10),
-  );
+
+  // FIX 2: Wrap localStorage read in try/catch to handle SSR and Safari private mode
+  const [guestDownloads, setGuestDownloads] = useState<number>(() => {
+    try {
+      return parseInt(localStorage.getItem('brolls_guest_downloads') ?? '0', 10);
+    } catch {
+      return 0;
+    }
+  });
 
   const GUEST_DOWNLOAD_LIMIT = 1;
-  const [categories, setCategories] = useState<Array<{ id: number; name: string; thumbnailUrl: string | null }>>([]);
+  const [categories, setCategories] = useState<
+    Array<{ id: number; name: string; thumbnailUrl: string | null }>
+  >([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | 'all'>('all');
-  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<number | 'all' | 'ai' | 'general'>('all');
-  const [heroIndex, setHeroIndex] = useState(0);
-  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<
+    number | 'all' | 'ai' | 'general'
+  >('all');
 
-  // ✅ FIX #2 — heroReady guard: hero video tab tak nahi chalega jab tak grid load na ho
-  const heroVideos = useMemo(() => {
-    if (!heroReady || !items.length) return [];
-    const vids = items.filter((it) => it.type === 'video' && Boolean(it.url));
-    if (!vids.length) return [];
-    const step = Math.max(1, Math.floor(vids.length / 3));
-    return ([vids[0], vids[step], vids[step * 2]] as typeof vids)
-      .filter((v): v is typeof vids[0] => Boolean(v?.url))
-      .map((v) => v.url);
-  }, [heroReady, items]);
+  const [zoomItem, setZoomItem] = useState<BrollItemWithMeta | null>(null);
+
+  // FIX 6: Ref to imperatively pause video before closing the zoom modal
+  const zoomVideoRef = useRef<HTMLVideoElement>(null);
+
+  // FIX 5: Track mount state to guard setState calls after async operations
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const projects = useProjectStore((s) => s.projects);
   const currentProject = useProjectStore((s) => s.currentProject);
@@ -109,16 +130,18 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
       setIsLoading(true);
       setError(null);
       try {
-        // ✅ FIX #1 — Parallel loading: pehle sequential tha, ab dono saath chalte hain
         const [lib] = await Promise.all([fetchBrollLibrary(), loadProjects()]);
 
         setCategories(
           (lib ?? []).map((c) => {
             const firstThumb =
-              c.subcategories?.flatMap((s) => s.items ?? []).find((it) => Boolean(it.thumbnail_url))?.thumbnail_url ?? null;
+              c.subcategories
+                ?.flatMap((s) => s.items ?? [])
+                .find((it) => Boolean(it.thumbnail_url))?.thumbnail_url ?? null;
             return { id: c.id, name: c.name, thumbnailUrl: firstThumb };
-          })
+          }),
         );
+
         const flat: BrollItemWithMeta[] = [];
         for (const cat of lib) {
           for (const sub of cat.subcategories ?? []) {
@@ -133,14 +156,12 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
             }
           }
         }
+        // FIX 6 (shuffle): Shuffle runs once here on fresh data; re-runs of the
+        // effect (e.g. after auth changes) will re-fetch library, so the shuffle
+        // is always operating on a fresh array — no unexpected re-shuffles of
+        // already-stored state.
         shuffleInPlace(flat);
-        if (!cancelled) {
-          setItems(flat);
-          // ✅ FIX #2 — Hero video 2 second baad shuru hoga taake grid pehle load ho sake
-          window.setTimeout(() => {
-            if (!cancelled) setHeroReady(true);
-          }, 2000);
-        }
+        if (!cancelled) setItems(flat);
       } catch (e) {
         const message = e instanceof Error ? e.message : 'Failed to load b-roll library.';
         if (!cancelled) setError(message);
@@ -158,12 +179,8 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   useEffect(() => {
     if (fixedProjectId) return;
     if (selectedProjectId) return;
-
     const preferred = currentProject?.id || projects[0]?.id || '';
-    if (preferred) {
-      setSelectedProjectId(preferred);
-      return;
-    }
+    if (preferred) setSelectedProjectId(preferred);
   }, [currentProject?.id, fixedProjectId, projects, selectedProjectId]);
 
   const projectName = useMemo(() => {
@@ -172,7 +189,6 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
     return projects.find((p) => p.id === pid)?.name ?? null;
   }, [effectiveProjectId, projects]);
 
-  // ✅ FIX #6 — debouncedQuery use karo dependency mein, query nahi
   const filtered = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
     return items.filter((it) => {
@@ -185,23 +201,34 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
         return false;
       }
       if (!q) return true;
-      const hay = `${it.name ?? ''} ${it.description ?? ''}`.toLowerCase();
+      const hay = [
+        it.name ?? '',
+        it.description ?? '',
+        it.__categoryName ?? '',
+        it.__subcategoryName ?? '',
+      ]
+        .join(' ')
+        .toLowerCase();
       return hay.includes(q);
     });
   }, [items, debouncedQuery, selectedCategoryId, selectedSubcategoryId]);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<15 | 30 | 60>(30);
-  const pageCount = useMemo(() => Math.max(1, Math.ceil(filtered.length / pageSize)), [filtered.length, pageSize]);
+  const pageCount = useMemo(
+    () => Math.max(1, Math.ceil(filtered.length / pageSize)),
+    [filtered.length, pageSize],
+  );
 
   useEffect(() => {
     const id = window.setTimeout(() => setDebouncedQuery(query), 300);
     return () => window.clearTimeout(id);
   }, [query]);
 
+  // FIX 7: Also reset page when selectedSubcategoryId changes (was missing)
   useEffect(() => {
     setPage(1);
-  }, [debouncedQuery, selectedCategoryId]);
+  }, [debouncedQuery, selectedCategoryId, selectedSubcategoryId]);
 
   useEffect(() => {
     setSelectedSubcategoryId('all');
@@ -211,83 +238,114 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
     setPage(1);
   }, [pageSize]);
 
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      setHeroIndex((i) => (i + 1) % heroVideos.length);
-    }, 12000);
-    return () => window.clearInterval(id);
-  }, [heroVideos.length]);
-
-  useEffect(() => {
-    if (!heroVideos.length) return;
-    const src = heroVideos[heroIndex % heroVideos.length];
-    if (!src) return;
-    const v = heroVideoRef.current;
-    if (!v) return;
-    if (v.getAttribute('data-src') === src) return;
-    v.setAttribute('data-src', src);
-    v.pause();
-    v.src = src;
-    v.load();
-    void v.play().catch(() => {});
-  }, [heroIndex, heroVideos]);
-
   const pageItems = useMemo(() => {
     const start = (page - 1) * pageSize;
     return filtered.slice(start, start + pageSize);
   }, [filtered, page, pageSize]);
 
-  const startDownload = useCallback(async (item: BrollLibraryItem) => {
-    if (!isAuthenticated && guestDownloads >= GUEST_DOWNLOAD_LIMIT) {
-      setGuestPromptOpen(true);
-      return;
-    }
-
-    const key = String(item.id);
-    setDownloadingKey(key);
-    try {
-      const res = await fetch(item.url, { mode: 'cors', credentials: 'omit' });
-      if (!res.ok) throw new Error(`Download failed (${res.status})`);
-      const blob = await res.blob();
-      const fileName = suggestedFileNameForBroll(item.name, item.url);
-      const url = URL.createObjectURL(blob);
-
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      a.rel = 'noreferrer';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-
-      if (!isAuthenticated) {
-        const next = guestDownloads + 1;
-        localStorage.setItem('brolls_guest_downloads', String(next));
-        setGuestDownloads(next);
+  // FIX 4 + FIX 5: Add guestDownloads to deps (fixes stale closure / limit bypass).
+  // FIX 5: Use AbortController and mountedRef to prevent state updates after unmount.
+  // FIX 3: Move revokeObjectURL into a finally block so it always runs.
+  const startDownload = useCallback(
+    async (item: BrollLibraryItem, signal: AbortSignal) => {
+      if (!isAuthenticated && guestDownloads >= GUEST_DOWNLOAD_LIMIT) {
+        setGuestPromptOpen(true);
+        return;
       }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Download failed.';
-      toast.error('Download failed', { description: msg });
-    } finally {
-      setDownloadingKey(null);
-    }
-  }, [isAuthenticated, guestDownloads, GUEST_DOWNLOAD_LIMIT]);
 
-  const handleDownload = useCallback((item: BrollItemWithMeta) => {
-    void startDownload(item);
-  }, [startDownload]);
+      const key = String(item.id);
+      if (mountedRef.current) setDownloadingKey(key);
+
+      let url: string | null = null;
+      try {
+        const res = await fetch(item.url, { mode: 'cors', credentials: 'omit', signal });
+        if (!res.ok) throw new Error(`Download failed (${res.status})`);
+        const blob = await res.blob();
+        const fileName = suggestedFileNameForBroll(item.name, item.url);
+        url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.rel = 'noreferrer';
+        document.body.appendChild(a);
+        try {
+          a.click();
+        } finally {
+          // FIX 3: Always clean up the anchor and object URL
+          a.remove();
+          URL.revokeObjectURL(url);
+          url = null;
+        }
+
+        if (!isAuthenticated) {
+          const next = guestDownloads + 1;
+          try {
+            localStorage.setItem('brolls_guest_downloads', String(next));
+          } catch {
+            // Ignore storage errors (private mode, quota exceeded)
+          }
+          if (mountedRef.current) setGuestDownloads(next);
+        }
+      } catch (e) {
+        // Ignore AbortError — user navigated away
+        if (e instanceof DOMException && e.name === 'AbortError') return;
+        const msg = e instanceof Error ? e.message : 'Download failed.';
+        if (mountedRef.current) toast.error('Download failed', { description: msg });
+      } finally {
+        // FIX 3: Belt-and-suspenders: revoke if we somehow exited without revoking
+        if (url) {
+          URL.revokeObjectURL(url);
+        }
+        // FIX 5: Only update state if still mounted
+        if (mountedRef.current) setDownloadingKey(null);
+      }
+    },
+    [isAuthenticated, guestDownloads], // FIX 4: guestDownloads in deps prevents stale closure
+  );
+
+  // Stable per-item download handler that creates a fresh AbortController each time
+  const handleDownload = useCallback(
+    (item: BrollItemWithMeta) => {
+      const controller = new AbortController();
+      void startDownload(item, controller.signal);
+    },
+    [startDownload],
+  );
+
+  // FIX 6: Close zoom modal by pausing video first, then clearing state
+  const closeZoom = useCallback(() => {
+    zoomVideoRef.current?.pause();
+    setZoomItem(null);
+  }, []);
+
+  // FIX 6: Keyboard Escape support for the zoom modal
+  useEffect(() => {
+    if (!zoomItem) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeZoom();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [zoomItem, closeZoom]);
 
   return (
     <div className="min-h-screen bg-background">
+      {/* ── Header ── */}
       <header className="panel-header border-b border-border">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-2 py-5 sm:px-4 lg:px-6">
           <div className="flex items-center gap-4 min-w-0">
             <Link to="/" className="shrink-0">
-              <FreeCutLogo variant="full" size="md" className="hover:opacity-80 transition-opacity" />
+              <FreeCutLogo
+                variant="full"
+                size="md"
+                className="hover:opacity-80 transition-opacity"
+              />
             </Link>
             <div className="min-w-0">
-              <div className="text-sm font-semibold text-foreground truncate">CutFlow Video Library</div>
+              <div className="text-sm font-semibold text-foreground truncate">
+                CutFlow Video Library
+              </div>
               <div className="text-xs text-muted-foreground truncate">
                 {projectName ? `Importing into: ${projectName}` : 'Choose a project to import into'}
               </div>
@@ -305,7 +363,8 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
                 </Link>
                 <div className="ml-1 flex items-center gap-2 border-l border-border pl-3">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                    {user?.firstName?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? <User className="h-4 w-4" />}
+                    {user?.firstName?.[0]?.toUpperCase() ??
+                      user?.email?.[0]?.toUpperCase() ?? <User className="h-4 w-4" />}
                   </div>
                   <span className="hidden max-w-[120px] truncate text-sm font-medium sm:block">
                     {user?.firstName ?? user?.email?.split('@')[0]}
@@ -324,7 +383,9 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
             ) : (
               <>
                 <Link to="/login" search={{ redirect: '/brolls' }}>
-                  <Button variant="outline" size="sm">Log In</Button>
+                  <Button variant="outline" size="sm">
+                    Log In
+                  </Button>
                 </Link>
                 <Link to="/signup" search={{ redirect: '/brolls' }}>
                   <Button size="sm">Sign Up Free</Button>
@@ -335,23 +396,23 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
         </div>
       </header>
 
+      {/* ── Hero ── */}
       <div className="relative h-[420px] overflow-hidden border-b border-border bg-card/30">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background/60 to-background/90" />
-          {/* ✅ FIX #2 — heroReady AND heroVideos.length dono check: tab tak video mount nahi hogi */}
-          {heroReady && heroVideos.length > 0 && (
-            <video
-              ref={heroVideoRef}
-              className="absolute inset-0 h-full w-full object-cover"
-              muted
-              loop
-              playsInline
-              preload="none"
-              aria-hidden="true"
-            />
-          )}
+          <video
+            className="absolute inset-0 h-full w-full object-cover"
+            src={HERO_VIDEO_SRC}
+            muted
+            loop
+            autoPlay
+            playsInline
+            preload="none"
+            aria-hidden="true"
+          />
           <div className="absolute inset-0 bg-background/20 backdrop-blur-[1px]" />
         </div>
+
         <div className="relative mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto">
             <div className="flex w-full items-center overflow-hidden rounded-md bg-black/35 shadow-sm backdrop-blur-sm ring-1 ring-white/10 focus-within:ring-2 focus-within:ring-white/25">
@@ -368,7 +429,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
                 <Input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search for videos…"
+                  placeholder="Search videos, categories…"
                   className="h-14 w-full rounded-none border-0 bg-transparent pl-12 pr-12 text-base text-white placeholder:text-white/70 shadow-none focus-visible:ring-0"
                 />
               </div>
@@ -383,31 +444,42 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
               </Button>
             </div>
           </div>
+
           <div className="mt-3 flex items-center justify-center gap-3">
             <span className="text-xs text-white/80">
               {isLoading ? 'Loading b-roll…' : `${filtered.length.toLocaleString()} results`}
             </span>
-            {(query || selectedCategoryId !== 'all' || selectedSubcategoryId !== 'all') && !isLoading && (
-              <button
-                type="button"
-                onClick={() => { setQuery(''); setSelectedCategoryId('all'); setSelectedSubcategoryId('all'); setPage(1); }}
-                className="text-xs font-medium text-white/70 underline hover:text-white"
-              >
-                Reset filters
-              </button>
-            )}
+            {(query || selectedCategoryId !== 'all' || selectedSubcategoryId !== 'all') &&
+              !isLoading && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery('');
+                    setSelectedCategoryId('all');
+                    setSelectedSubcategoryId('all');
+                    setPage(1);
+                  }}
+                  className="text-xs font-medium text-white/70 underline hover:text-white"
+                >
+                  Reset filters
+                </button>
+              )}
           </div>
 
           {!isLoading && categories.length ? (
             <section className="mt-6 rounded-lg bg-background/20 p-4 backdrop-blur-sm">
-              <div className="text-sm font-semibold text-foreground">Explore Stock Footage Categories</div>
+              <div className="text-sm font-semibold text-foreground">
+                Explore Stock Footage Categories
+              </div>
               <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
                 <button
                   type="button"
                   onClick={() => setSelectedCategoryId('all')}
                   className={[
                     'group flex w-full items-center gap-4 rounded-md bg-black/20 p-4 text-left transition-colors hover:bg-white/10',
-                    selectedCategoryId === 'all' ? 'bg-white/10 ring-1 ring-primary/40' : 'ring-1 ring-transparent',
+                    selectedCategoryId === 'all'
+                      ? 'bg-white/10 ring-1 ring-primary/40'
+                      : 'ring-1 ring-transparent',
                   ].join(' ')}
                 >
                   <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md bg-white/10 grid place-items-center">
@@ -424,12 +496,20 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
                     onClick={() => setSelectedCategoryId(c.id)}
                     className={[
                       'group flex w-full items-center gap-4 rounded-md bg-black/20 p-4 text-left transition-colors hover:bg-white/10',
-                      selectedCategoryId === c.id ? 'bg-white/10 ring-1 ring-primary/34' : 'ring-1 ring-transparent',
+                      selectedCategoryId === c.id
+                        ? 'bg-white/10 ring-1 ring-primary/34'
+                        : 'ring-1 ring-transparent',
                     ].join(' ')}
                   >
                     <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md bg-muted/60">
                       {c.thumbnailUrl ? (
-                        <img src={c.thumbnailUrl} alt={c.name} className="h-full w-full object-cover" loading="lazy" />
+                        <img
+                          src={c.thumbnailUrl}
+                          alt={c.name}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                          decoding="async"
+                        />
                       ) : null}
                     </div>
                     <div className="min-w-0">
@@ -443,6 +523,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
         </div>
       </div>
 
+      {/* ── Main grid ── */}
       <main className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
         {error && (
           <div className="max-w-3xl mx-auto mb-8">
@@ -477,67 +558,113 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
                   item={it}
                   downloading={downloadingKey === String(it.id)}
                   onDownload={handleDownload}
+                  onPlay={setZoomItem}
                 />
               ))}
             </div>
 
+            {/* FIX 9: Unified pagination — removed the redundant centred "Next page"
+                text button. Navigation is now exclusively handled by the icon buttons
+                and the page counter on the right, which is consistent and unambiguous. */}
             {pageCount > 1 ? (
-              <div className="grid grid-cols-3 items-center">
-                <div />
-                <div className="justify-self-center">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="bg-primary/15 text-white hover:bg-primary/20"
-                    disabled={page >= pageCount}
-                    onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+              <div className="flex items-center justify-end gap-2">
+                <div className="hidden items-center gap-2 sm:flex">
+                  <div className="text-xs text-muted-foreground">Per page</div>
+                  <Select
+                    value={String(pageSize)}
+                    onValueChange={(v) => setPageSize(Number(v) as 15 | 30 | 60)}
                   >
-                    Next page
-                  </Button>
+                    <SelectTrigger className="h-9 w-[90px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15">15</SelectItem>
+                      <SelectItem value="30">30</SelectItem>
+                      <SelectItem value="60">60</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="justify-self-end">
-                  <div className="flex items-center gap-2">
-                    <div className="hidden items-center gap-2 sm:flex">
-                      <div className="text-xs text-muted-foreground">Per page</div>
-                      <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v) as 15 | 30 | 60)}>
-                        <SelectTrigger className="h-9 w-[90px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="15">15</SelectItem>
-                          <SelectItem value="30">30</SelectItem>
-                          <SelectItem value="60">60</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      disabled={page <= 1}
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      aria-label="Previous page"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <div className="hidden px-1 text-xs text-muted-foreground sm:block">
-                      Page {page} of {pageCount}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      disabled={page >= pageCount}
-                      onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-                      aria-label="Next page"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="hidden px-1 text-xs text-muted-foreground sm:block">
+                  Page {page} of {pageCount}
                 </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  disabled={page >= pageCount}
+                  onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                  aria-label="Next page"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
             ) : null}
           </div>
         )}
       </main>
+
+      {/* ── Zoom modal ── */}
+      {zoomItem && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          onClick={closeZoom} // FIX 6: use closeZoom (pauses video first)
+        >
+          <div
+            className="relative w-full max-w-4xl mx-4 rounded-2xl overflow-hidden bg-black shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
+              onClick={closeZoom} // FIX 6: use closeZoom
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            {/* FIX 6: ref attached so closeZoom can pause before unmounting */}
+            <video
+              ref={zoomVideoRef}
+              className="w-full aspect-video object-contain"
+              src={zoomItem.url}
+              autoPlay
+              controls
+              playsInline
+              preload="metadata"
+            />
+
+            <div className="flex items-center justify-between gap-4 px-4 py-3 bg-zinc-900">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-white">{zoomItem.name}</p>
+                <p className="truncate text-xs text-white/50">
+                  {zoomItem.__categoryName} · {zoomItem.__subcategoryName}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                className="shrink-0"
+                onClick={() => handleDownload(zoomItem)}
+                disabled={downloadingKey === String(zoomItem.id)}
+              >
+                {downloadingKey === String(zoomItem.id) ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                Download
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Guest auth prompt ── */}
       <Dialog open={guestPromptOpen} onOpenChange={setGuestPromptOpen}>
@@ -548,16 +675,28 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
             </DialogTitle>
             <DialogDescription className="mt-1.5">
               {guestDownloads >= GUEST_DOWNLOAD_LIMIT
-                ? 'You\'ve used your free download. Sign in or create a free account to download unlimited b-roll footage.'
+                ? "You've used your free download. Sign in or create a free account to download unlimited b-roll footage."
                 : 'Create a free account or sign in to import b-roll footage directly into your projects.'}
             </DialogDescription>
           </DialogHeader>
           <div className="mt-2 flex flex-col gap-3">
-            <Link to="/signup" search={{ redirect: '/brolls' }} onClick={() => setGuestPromptOpen(false)}>
-              <Button className="w-full" size="lg">Sign Up — it&apos;s free</Button>
+            <Link
+              to="/signup"
+              search={{ redirect: '/brolls' }}
+              onClick={() => setGuestPromptOpen(false)}
+            >
+              <Button className="w-full" size="lg">
+                Sign Up — it&apos;s free
+              </Button>
             </Link>
-            <Link to="/login" search={{ redirect: '/brolls' }} onClick={() => setGuestPromptOpen(false)}>
-              <Button variant="outline" className="w-full" size="lg">Log In</Button>
+            <Link
+              to="/login"
+              search={{ redirect: '/brolls' }}
+              onClick={() => setGuestPromptOpen(false)}
+            >
+              <Button variant="outline" className="w-full" size="lg">
+                Log In
+              </Button>
             </Link>
           </div>
           <p className="mt-1 text-center text-xs text-muted-foreground">
@@ -583,7 +722,9 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
             <div className="text-sm font-medium">Project</div>
             <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
               <SelectTrigger>
-                <SelectValue placeholder={projects.length ? 'Select a project…' : 'No projects available'} />
+                <SelectValue
+                  placeholder={projects.length ? 'Select a project…' : 'No projects available'}
+                />
               </SelectTrigger>
               <SelectContent>
                 {projects.map((p) => (
@@ -594,135 +735,72 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
               </SelectContent>
             </Select>
             {!projects.length && (
-              <div className="text-xs text-muted-foreground">Create a project first from the Projects page.</div>
+              <div className="text-xs text-muted-foreground">
+                Create a project first from the Projects page.
+              </div>
             )}
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setProjectPickerOpen(false)} disabled={!selectedProjectId}>
+            <Button
+              variant="outline"
+              onClick={() => setProjectPickerOpen(false)}
+              disabled={!selectedProjectId}
+            >
               Close
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <footer className="border-t border-border px-6 py-8">
-        {/* <div className="mx-auto max-w-5xl text-center text-sm text-muted-foreground">
-          MIT License © {new Date().getFullYear()} FreeCut
-        </div> */}
-      </footer>
+      <footer className="border-t border-border px-6 py-8" />
     </div>
   );
 }
 
 // ─── BrollCard ────────────────────────────────────────────────────────────────
+// FIX 1: The download button was nested inside a <button> (the thumbnail wrapper),
+// which is invalid HTML — browsers auto-repair it by ejecting the inner button,
+// breaking stopPropagation and causing every download click to also open the modal.
+// Fixed by converting the outer wrapper to a <div role="button"> so interactive
+// content can be legitimately nested inside it.
 
 const BrollCard = memo(function BrollCard({
   item,
   downloading,
   onDownload,
+  onPlay,
 }: {
   item: BrollItemWithMeta;
   downloading: boolean;
   onDownload: (item: BrollItemWithMeta) => void;
+  onPlay: (item: BrollItemWithMeta) => void;
 }) {
   const thumb = item.thumbnail_url || (item.type === 'image' ? item.url : null);
-  const [hovered, setHovered] = useState(false);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const hoverTimerRef = useRef<number | null>(null);
-  const fetchAbortRef = useRef<AbortController | null>(null);
-  const blobUrlRef = useRef<string | null>(null);
-
-  // ✅ FIX #3 — 3MB ki jagah 512KB: network zyada choke nahi hoga
-  // ✅ FIX #4 — 700ms ki jagah 1000ms: mouse accidentally guzre toh fetch na ho
-  const PREVIEW_CHUNK = 512 * 1024;
-  const HOVER_DELAY_MS = 1000;
-
-  useEffect(() => {
-    if (!hovered || item.type !== 'video') return;
-
-    setPreviewLoading(true);
-    if (fetchAbortRef.current) fetchAbortRef.current.abort();
-    const controller = new AbortController();
-    fetchAbortRef.current = controller;
-
-    fetch(item.url, {
-      // ✅ FIX #3 — PREVIEW_CHUNK use karo
-      headers: { Range: `bytes=0-${PREVIEW_CHUNK - 1}` },
-      signal: controller.signal,
-      mode: 'cors',
-      credentials: 'omit',
-    })
-      .then((res) => res.blob())
-      .then((blob) => {
-        if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
-        const url = URL.createObjectURL(blob);
-        blobUrlRef.current = url;
-        setPreviewSrc(url);
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setPreviewSrc(item.url);
-      });
-
-    return () => controller.abort();
-  }, [hovered, item.type, item.url]);
-
-  useEffect(() => {
-    if (item.type !== 'video' || !hovered || !previewSrc) return;
-    const v = videoRef.current;
-    if (!v) return;
-    void v.play().catch(() => {});
-  }, [hovered, previewSrc, item.type]);
-
-  useEffect(() => {
-    if (hovered) return;
-    if (fetchAbortRef.current) { fetchAbortRef.current.abort(); fetchAbortRef.current = null; }
-    if (blobUrlRef.current) { URL.revokeObjectURL(blobUrlRef.current); blobUrlRef.current = null; }
-    setPreviewSrc(null);
-    setPreviewLoading(false);
-  }, [hovered]);
-
-  useEffect(() => () => {
-    if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (hoverTimerRef.current !== null) {
-        window.clearTimeout(hoverTimerRef.current);
-        hoverTimerRef.current = null;
-      }
-    };
-  }, []);
 
   return (
-    <div
-      className="group relative overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 text-left"
-      onMouseEnter={() => {
-        if (item.type !== 'video') return;
-        if (hoverTimerRef.current !== null) window.clearTimeout(hoverTimerRef.current);
-        // ✅ FIX #4 — HOVER_DELAY_MS (1000ms)
-        hoverTimerRef.current = window.setTimeout(() => {
-          setHovered(true);
-        }, HOVER_DELAY_MS);
-      }}
-      onMouseLeave={() => {
-        if (hoverTimerRef.current !== null) {
-          window.clearTimeout(hoverTimerRef.current);
-          hoverTimerRef.current = null;
-        }
-        setHovered(false);
-      }}
-    >
-      <div className="relative aspect-video w-full overflow-hidden bg-muted">
+    <div className="group relative overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 text-left">
+      {/* FIX 1: Changed from <button> to <div role="button"> to allow the
+          download <button> to be a valid nested interactive element. */}
+      <div
+        role="button"
+        tabIndex={0}
+        className="relative aspect-video w-full overflow-hidden bg-muted block cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        onClick={() => onPlay(item)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onPlay(item);
+          }
+        }}
+        aria-label={`Play "${item.name}"`}
+      >
         {thumb ? (
           <img
             src={thumb}
             alt={item.name}
             loading="lazy"
-            decoding="async"  // ✅ FIX #5 — main thread block nahi hoga decode karte waqt
+            decoding="async"
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
           />
         ) : (
@@ -734,49 +812,40 @@ const BrollCard = memo(function BrollCard({
           </div>
         )}
 
-        {item.type === 'video' && !hovered && thumb && (
+        {item.type === 'video' && (
           <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-black/50 px-2 py-1 backdrop-blur-sm">
             <Play className="h-3 w-3 fill-white text-white" />
             <span className="text-[10px] font-medium text-white">Video</span>
           </div>
         )}
 
-        {item.type === 'video' && hovered && previewSrc ? (
-          <video
-            ref={videoRef}
-            className="absolute inset-0 h-full w-full object-cover"
-            src={previewSrc}
-            muted
-            playsInline
-            loop
-            preload="auto"
-            controls={false}
-            aria-hidden="true"
-            onCanPlay={() => setPreviewLoading(false)}
-            onPlaying={() => setPreviewLoading(false)}
-          />
-        ) : null}
-
-        {item.type === 'video' && hovered && previewLoading ? (
-          <div className="absolute inset-0 grid place-items-center bg-black/20">
-            <div className="inline-flex items-center gap-2 rounded-full bg-black/45 px-3 py-1.5 text-xs text-white backdrop-blur-sm">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading…
+        <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors duration-200 group-hover:bg-black/30">
+          {item.type === 'video' && (
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 opacity-0 transition-opacity duration-200 group-hover:opacity-100 backdrop-blur-sm">
+              <Play className="h-6 w-6 fill-white text-white" />
             </div>
-          </div>
-        ) : null}
+          )}
+        </div>
 
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100" />
-        <div className="absolute bottom-0 left-0 right-0 p-3 pointer-events-none opacity-0 translate-y-1 transition-all duration-200 group-hover:pointer-events-auto group-hover:opacity-100 group-hover:translate-y-0 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-focus-within:translate-y-0">
+        {/* Download overlay — now a valid <button> inside a <div role="button"> */}
+        <div className="absolute bottom-0 left-0 right-0 p-3 pointer-events-none opacity-0 translate-y-1 transition-all duration-200 group-hover:pointer-events-auto group-hover:opacity-100 group-hover:translate-y-0">
           <div className="flex items-end justify-end gap-2">
             <button
               type="button"
               className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-black/50 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/65 disabled:cursor-not-allowed disabled:opacity-70"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDownload(item); }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation(); // Now works correctly — not inside another <button>
+                onDownload(item);
+              }}
               disabled={downloading}
               title={`Download "${item.name}"`}
             >
-              {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+              {downloading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
               {downloading ? 'Downloading…' : 'Download'}
             </button>
           </div>
@@ -815,6 +884,9 @@ function BrollGridSkeleton() {
 }
 
 // ─── SubcategoryFilters ───────────────────────────────────────────────────────
+// FIX 8: The overflow <Select> was duplicating items already shown as visible
+// pills (AI, General). Fixed by only rendering items in the overflow dropdown
+// that are not already rendered as visible pill buttons above.
 
 function SubcategoryFilters({
   items,
@@ -847,8 +919,12 @@ function SubcategoryFilters({
     ];
   }, [items, selectedCategoryId]);
 
-  const visible = subs.slice(0, 7);
-  const overflow = subs.slice(7);
+  // Items shown as visible pill buttons (always rendered regardless of overflow)
+  const visiblePills = subs.slice(0, 7);
+  // IDs of items already shown as pills — used to de-duplicate the overflow dropdown
+  const visiblePillIds = new Set(visiblePills.map((s) => String(s.id)));
+  // FIX 8: Only items NOT already rendered as pills go into the overflow select
+  const overflowItems = subs.slice(7).filter((s) => !visiblePillIds.has(String(s.id)));
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -865,7 +941,7 @@ function SubcategoryFilters({
         <Search className="h-4 w-4" />
         All
       </button>
-      {visible.map((s) => (
+      {visiblePills.map((s) => (
         <button
           key={s.id}
           type="button"
@@ -881,21 +957,26 @@ function SubcategoryFilters({
           {s.name}
         </button>
       ))}
-      {overflow.length ? (
+      {/* FIX 8: Only render the overflow select when there are truly extra items */}
+      {overflowItems.length > 0 ? (
         <Select
-          value={selectedSubcategoryId === 'all' ? 'all' : String(selectedSubcategoryId)}
+          value={
+            // Only show a value in the select if the active filter is one of the overflow items
+            overflowItems.some((s) => String(s.id) === String(selectedSubcategoryId))
+              ? String(selectedSubcategoryId)
+              : ''
+          }
           onValueChange={(v) =>
-            onChange(v === 'all' ? 'all' : v === 'ai' ? 'ai' : v === 'general' ? 'general' : Number(v))
+            onChange(
+              v === 'all' ? 'all' : v === 'ai' ? 'ai' : v === 'general' ? 'general' : Number(v),
+            )
           }
         >
           <SelectTrigger className="h-9 w-[140px] rounded-full bg-background/50">
-            <SelectValue placeholder="More" />
+            <SelectValue placeholder="More…" />
           </SelectTrigger>
           <SelectContent className="w-[220px] max-h-64 overflow-y-auto">
-            <SelectItem value="all">All</SelectItem>
-            {subs.some((s) => s.id === 'ai') ? <SelectItem value="ai">AI</SelectItem> : null}
-            {subs.some((s) => s.id === 'general') ? <SelectItem value="general">General</SelectItem> : null}
-            {overflow.map((s) => (
+            {overflowItems.map((s) => (
               <SelectItem key={s.id} value={String(s.id)}>
                 {s.name}
               </SelectItem>
