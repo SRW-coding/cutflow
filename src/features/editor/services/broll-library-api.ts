@@ -67,6 +67,50 @@ function normalizeAssetUrl(assetUrl: string): string {
 let _libraryCache: BrollCategory[] | null = null;
 let _libraryCacheAt = 0;
 const LIBRARY_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const LIBRARY_LS_KEY = 'brolls_library_cache_v1';
+const LIBRARY_LS_MAX_AGE_MS = 24 * 60 * 60 * 1000; // serve from disk up to 24h
+
+interface PersistedLibraryCache {
+  at: number;
+  data: BrollCategory[];
+}
+
+function readLocalStorageCache(): PersistedLibraryCache | null {
+  try {
+    const raw = localStorage.getItem(LIBRARY_LS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PersistedLibraryCache;
+    if (!parsed || typeof parsed.at !== 'number' || !Array.isArray(parsed.data)) return null;
+    if (Date.now() - parsed.at > LIBRARY_LS_MAX_AGE_MS) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalStorageCache(data: BrollCategory[]): void {
+  try {
+    localStorage.setItem(LIBRARY_LS_KEY, JSON.stringify({ at: Date.now(), data }));
+  } catch {
+    // Quota / private mode — silently ignore. In-memory cache still applies.
+  }
+}
+
+/**
+ * Synchronous cache lookup for stale-while-revalidate. Returns immediately
+ * with whatever the in-memory or localStorage cache holds, even if stale.
+ * Callers should still call fetchBrollLibrary() to revalidate in the background.
+ */
+export function getCachedBrollLibrary(): BrollCategory[] | null {
+  if (_libraryCache) return _libraryCache;
+  const persisted = readLocalStorageCache();
+  if (persisted) {
+    _libraryCache = persisted.data;
+    _libraryCacheAt = persisted.at;
+    return persisted.data;
+  }
+  return null;
+}
 
 /**
  * GET /brolls/library — nested categories with subcategories and asset URLs.
@@ -130,6 +174,7 @@ export async function fetchBrollLibrary(): Promise<BrollCategory[]> {
 
   _libraryCache = result;
   _libraryCacheAt = Date.now();
+  writeLocalStorageCache(result);
   return result;
 }
 

@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   fetchBrollLibrary,
+  getCachedBrollLibrary,
   suggestedFileNameForBroll,
   type BrollLibraryItem,
 } from '@/features/brolls/deps/broll-library-api';
@@ -61,6 +62,58 @@ function shuffleInPlace<T>(arr: T[]): T[] {
   return arr;
 }
 
+type RawCategory = {
+  id: number;
+  name: string;
+  subcategories?: Array<{
+    id: number;
+    name: string;
+    items?: BrollLibraryItem[];
+  }>;
+};
+
+type ProcessedLibrary = {
+  categories: Array<{ id: number; name: string; thumbnailUrl: string | null }>;
+  items: BrollItemWithMeta[];
+};
+
+function processLibrary(lib: RawCategory[]): ProcessedLibrary {
+  const categories = (lib ?? []).map((c) => {
+    const firstThumb =
+      c.subcategories
+        ?.flatMap((s) => s.items ?? [])
+        .find((it) => Boolean(it.thumbnail_url))?.thumbnail_url ?? null;
+    return { id: c.id, name: c.name, thumbnailUrl: firstThumb };
+  });
+
+  const flat: BrollItemWithMeta[] = [];
+  for (const cat of lib) {
+    for (const sub of cat.subcategories ?? []) {
+      for (const it of sub.items ?? []) {
+        flat.push({
+          ...it,
+          __categoryId: cat.id,
+          __categoryName: cat.name,
+          __subcategoryId: sub.id,
+          __subcategoryName: sub.name,
+        });
+      }
+    }
+  }
+  shuffleInPlace(flat);
+  return { categories, items: flat };
+}
+
+function fingerprintLibrary(items: BrollItemWithMeta[]): string {
+  // Cheap signal of whether the underlying library changed since last fetch.
+  // If it didn't, we skip the state update to avoid reshuffling visible items.
+  let hash = items.length + ':';
+  for (let i = 0; i < items.length; i++) {
+    hash += items[i]!.id + ',';
+  }
+  return hash;
+}
+
 export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
@@ -77,9 +130,17 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [searchKind, setSearchKind] = useState<'videos'>('videos');
-  const [isLoading, setIsLoading] = useState(true);
+
+  // Seed state from the persisted cache so repeat visits paint instantly
+  // instead of waiting on the network. We still revalidate in the effect below.
+  const initialFromCache = useMemo<ProcessedLibrary | null>(() => {
+    const cached = getCachedBrollLibrary();
+    return cached ? processLibrary(cached as RawCategory[]) : null;
+  }, []);
+
+  const [isLoading, setIsLoading] = useState(!initialFromCache);
   const [error, setError] = useState<string | null>(null);
-  const [items, setItems] = useState<BrollItemWithMeta[]>([]);
+  const [items, setItems] = useState<BrollItemWithMeta[]>(initialFromCache?.items ?? []);
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
   const [guestPromptOpen, setGuestPromptOpen] = useState(false);
 
@@ -95,7 +156,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   const GUEST_DOWNLOAD_LIMIT = 1;
   const [categories, setCategories] = useState<
     Array<{ id: number; name: string; thumbnailUrl: string | null }>
-  >([]);
+  >(initialFromCache?.categories ?? []);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | 'all'>('all');
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<
     number | 'all' | 'ai' | 'general'
@@ -123,48 +184,39 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
 
   const [projectPickerOpen, setProjectPickerOpen] = useState(false);
 
+  // Track the fingerprint of the currently-rendered library so we can skip
+  // re-rendering (and re-shuffling) when revalidation returns identical data.
+  const renderedFingerprintRef = useRef<string>(
+    initialFromCache ? fingerprintLibrary(initialFromCache.items) : '',
+  );
+
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
-      setIsLoading(true);
+      // Only show the skeleton when we have nothing at all to render.
+      // With a warm cache we keep the existing items visible and revalidate silently.
+      if (!initialFromCache) setIsLoading(true);
       setError(null);
       try {
         const [lib] = await Promise.all([fetchBrollLibrary(), loadProjects()]);
+        if (cancelled) return;
 
-        setCategories(
-          (lib ?? []).map((c) => {
-            const firstThumb =
-              c.subcategories
-                ?.flatMap((s) => s.items ?? [])
-                .find((it) => Boolean(it.thumbnail_url))?.thumbnail_url ?? null;
-            return { id: c.id, name: c.name, thumbnailUrl: firstThumb };
-          }),
-        );
+        const processed = processLibrary(lib as RawCategory[]);
+        const nextFp = fingerprintLibrary(processed.items);
 
-        const flat: BrollItemWithMeta[] = [];
-        for (const cat of lib) {
-          for (const sub of cat.subcategories ?? []) {
-            for (const it of sub.items ?? []) {
-              flat.push({
-                ...it,
-                __categoryId: cat.id,
-                __categoryName: cat.name,
-                __subcategoryId: sub.id,
-                __subcategoryName: sub.name,
-              });
-            }
-          }
+        // Identical library → don't reshuffle the visible grid.
+        if (nextFp === renderedFingerprintRef.current && initialFromCache) {
+          return;
         }
-        // FIX 6 (shuffle): Shuffle runs once here on fresh data; re-runs of the
-        // effect (e.g. after auth changes) will re-fetch library, so the shuffle
-        // is always operating on a fresh array — no unexpected re-shuffles of
-        // already-stored state.
-        shuffleInPlace(flat);
-        if (!cancelled) setItems(flat);
+        renderedFingerprintRef.current = nextFp;
+        setCategories(processed.categories);
+        setItems(processed.items);
       } catch (e) {
         const message = e instanceof Error ? e.message : 'Failed to load b-roll library.';
-        if (!cancelled) setError(message);
+        // Suppress the error overlay if we're already showing cached data —
+        // a background revalidate failure shouldn't blow away a working page.
+        if (!cancelled && !initialFromCache) setError(message);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -174,7 +226,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
     return () => {
       cancelled = true;
     };
-  }, [loadProjects]);
+  }, [loadProjects, initialFromCache]);
 
   useEffect(() => {
     if (fixedProjectId) return;
@@ -400,16 +452,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
       <div className="relative h-[420px] overflow-hidden border-b border-border bg-card/30">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background/60 to-background/90" />
-          <video
-            className="absolute inset-0 h-full w-full object-cover"
-            src={HERO_VIDEO_SRC}
-            muted
-            loop
-            autoPlay
-            playsInline
-            preload="none"
-            aria-hidden="true"
-          />
+          <HeroVideo src={HERO_VIDEO_SRC} />
           <div className="absolute inset-0 bg-background/20 backdrop-blur-[1px]" />
         </div>
 
@@ -859,6 +902,48 @@ const BrollCard = memo(function BrollCard({
     </div>
   );
 });
+
+// ─── HeroVideo ────────────────────────────────────────────────────────────────
+// The hero video used to mount with `autoPlay`, which overrides `preload="none"`
+// and makes the browser start downloading video bytes alongside the library API.
+// We now defer mounting the <video> element entirely until the browser is idle
+// (or after a short fallback timeout), so the library fetch and first-page
+// thumbnails get the network to themselves on a cold load.
+
+function HeroVideo({ src }: { src: string }) {
+  const [mount, setMount] = useState(false);
+
+  useEffect(() => {
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+    };
+    if (typeof w.requestIdleCallback === 'function') {
+      const id = w.requestIdleCallback(() => setMount(true), { timeout: 2000 });
+      return () => {
+        const cancel = (window as unknown as { cancelIdleCallback?: (id: number) => void })
+          .cancelIdleCallback;
+        if (typeof cancel === 'function') cancel(id);
+      };
+    }
+    const t = window.setTimeout(() => setMount(true), 1500);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  if (!mount) return null;
+
+  return (
+    <video
+      className="absolute inset-0 h-full w-full object-cover"
+      src={src}
+      muted
+      loop
+      autoPlay
+      playsInline
+      preload="metadata"
+      aria-hidden="true"
+    />
+  );
+}
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
