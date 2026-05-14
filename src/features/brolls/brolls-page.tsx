@@ -1014,11 +1014,6 @@ const BrollCard = memo(function BrollCard({
           </div>
         </div>
       </div>
-
-      <div className="px-3 py-2.5">
-        <p className="truncate text-sm font-medium leading-snug text-foreground">{item.name}</p>
-        <p className="mt-0.5 truncate text-xs text-muted-foreground">{item.__subcategoryName}</p>
-      </div>
     </div>
   );
 });
