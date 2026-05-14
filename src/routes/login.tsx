@@ -122,7 +122,7 @@ function LoginPage() {
               {submitting ? 'Signing in…' : 'Sign in'}
             </Button>
 
-            <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center justify-center text-sm">
               <span className="text-muted-foreground">Don&apos;t have an account?</span>
               <Link to="/signup" search={redirect ? { redirect } : {}} className="font-medium text-primary hover:underline">
                 Create one

@@ -398,9 +398,9 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
               />
             </Link>
             <div className="min-w-0">
-              <div className="text-sm font-semibold text-foreground truncate">
+              {/* <div className="text-sm font-semibold text-foreground truncate">
                 CutFlow Video Library
-              </div>
+              </div> */}
               <div className="text-xs text-muted-foreground truncate">
                 {projectName ? `Importing into: ${projectName}` : 'Choose a project to import into'}
               </div>
@@ -811,6 +811,9 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
 // Fixed by converting the outer wrapper to a <div role="button"> so interactive
 // content can be legitimately nested inside it.
 
+const PREVIEW_CHUNK_BYTES = 512 * 1024;
+const HOVER_PREVIEW_DELAY_MS = 1000;
+
 const BrollCard = memo(function BrollCard({
   item,
   downloading,
@@ -824,8 +827,97 @@ const BrollCard = memo(function BrollCard({
 }) {
   const thumb = item.thumbnail_url || (item.type === 'image' ? item.url : null);
 
+  // Hover-to-preview: after a 1s hover, range-fetch the first 512KB of the
+  // video so the preview plays without pulling the whole asset. The debounce
+  // stops a fetch storm when the cursor brushes across many cards.
+  const [hovered, setHovered] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const hoverTimerRef = useRef<number | null>(null);
+  const fetchAbortRef = useRef<AbortController | null>(null);
+  const blobUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!hovered || item.type !== 'video') return;
+
+    setPreviewLoading(true);
+    if (fetchAbortRef.current) fetchAbortRef.current.abort();
+    const controller = new AbortController();
+    fetchAbortRef.current = controller;
+
+    fetch(item.url, {
+      headers: { Range: `bytes=0-${PREVIEW_CHUNK_BYTES - 1}` },
+      signal: controller.signal,
+      mode: 'cors',
+      credentials: 'omit',
+    })
+      .then((res) => res.blob())
+      .then((blob) => {
+        if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+        const url = URL.createObjectURL(blob);
+        blobUrlRef.current = url;
+        setPreviewSrc(url);
+      })
+      .catch(() => {
+        // CORS / network failure — fall back to the full URL and let the
+        // <video> element stream it progressively.
+        if (!controller.signal.aborted) setPreviewSrc(item.url);
+      });
+
+    return () => controller.abort();
+  }, [hovered, item.type, item.url]);
+
+  useEffect(() => {
+    if (item.type !== 'video' || !hovered || !previewSrc) return;
+    const v = videoRef.current;
+    if (!v) return;
+    void v.play().catch(() => {});
+  }, [hovered, previewSrc, item.type]);
+
+  useEffect(() => {
+    if (hovered) return;
+    if (fetchAbortRef.current) {
+      fetchAbortRef.current.abort();
+      fetchAbortRef.current = null;
+    }
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
+    setPreviewSrc(null);
+    setPreviewLoading(false);
+  }, [hovered]);
+
+  useEffect(
+    () => () => {
+      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+      if (hoverTimerRef.current !== null) {
+        window.clearTimeout(hoverTimerRef.current);
+        hoverTimerRef.current = null;
+      }
+    },
+    [],
+  );
+
   return (
-    <div className="group relative overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 text-left">
+    <div
+      className="group relative overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 text-left"
+      onMouseEnter={() => {
+        if (item.type !== 'video') return;
+        if (hoverTimerRef.current !== null) window.clearTimeout(hoverTimerRef.current);
+        hoverTimerRef.current = window.setTimeout(() => {
+          setHovered(true);
+        }, HOVER_PREVIEW_DELAY_MS);
+      }}
+      onMouseLeave={() => {
+        if (hoverTimerRef.current !== null) {
+          window.clearTimeout(hoverTimerRef.current);
+          hoverTimerRef.current = null;
+        }
+        setHovered(false);
+      }}
+    >
       {/* FIX 1: Changed from <button> to <div role="button"> to allow the
           download <button> to be a valid nested interactive element. */}
       <div
@@ -858,15 +950,40 @@ const BrollCard = memo(function BrollCard({
           </div>
         )}
 
-        {item.type === 'video' && (
+        {item.type === 'video' && !hovered && (
           <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-black/50 px-2 py-1 backdrop-blur-sm">
             <Play className="h-3 w-3 fill-white text-white" />
             <span className="text-[10px] font-medium text-white">Video</span>
           </div>
         )}
 
+        {item.type === 'video' && hovered && previewSrc ? (
+          <video
+            ref={videoRef}
+            className="absolute inset-0 h-full w-full object-cover"
+            src={previewSrc}
+            muted
+            playsInline
+            loop
+            preload="auto"
+            controls={false}
+            aria-hidden="true"
+            onCanPlay={() => setPreviewLoading(false)}
+            onPlaying={() => setPreviewLoading(false)}
+          />
+        ) : null}
+
+        {item.type === 'video' && hovered && previewLoading ? (
+          <div className="absolute inset-0 grid place-items-center bg-black/20">
+            <div className="inline-flex items-center gap-2 rounded-full bg-black/45 px-3 py-1.5 text-xs text-white backdrop-blur-sm">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading…
+            </div>
+          </div>
+        ) : null}
+
         <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors duration-200 group-hover:bg-black/30">
-          {item.type === 'video' && (
+          {item.type === 'video' && !hovered && (
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 opacity-0 transition-opacity duration-200 group-hover:opacity-100 backdrop-blur-sm">
               <Play className="h-6 w-6 fill-white text-white" />
             </div>
