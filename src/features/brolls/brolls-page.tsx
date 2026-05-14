@@ -43,7 +43,10 @@ import {
 import { useAuthStore } from '@/stores/auth-store';
 import { authApi } from '@/infrastructure/api/auth';
 
-const HERO_VIDEO_SRC = '../../../public/assets/hero/hero.mp4';
+// Vite serves anything under `public/` at the URL root without the `public/`
+// prefix, so the file at `public/assets/hero/hero.mp4` is reachable at this URL
+// in both dev and on Vercel.
+const HERO_VIDEO_SRC = '/assets/hero/hero.mp4';
 
 type BrollItemWithMeta = BrollLibraryItem & {
   __categoryId: number;
