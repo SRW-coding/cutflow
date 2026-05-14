@@ -232,11 +232,11 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
     if (preferred) setSelectedProjectId(preferred);
   }, [currentProject?.id, fixedProjectId, projects, selectedProjectId]);
 
-  const projectName = useMemo(() => {
-    const pid = effectiveProjectId;
-    if (!pid) return null;
-    return projects.find((p) => p.id === pid)?.name ?? null;
-  }, [effectiveProjectId, projects]);
+  // const projectName = useMemo(() => {
+  //   const pid = effectiveProjectId;
+  //   if (!pid) return null;
+  //   return projects.find((p) => p.id === pid)?.name ?? null;
+  // }, [effectiveProjectId, projects]);
 
   const filtered = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
