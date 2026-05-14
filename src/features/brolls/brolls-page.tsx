@@ -375,14 +375,14 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
                 className="hover:opacity-80 transition-opacity"
               />
             </Link>
-            <div className="min-w-0">
-              {/* <div className="text-sm font-semibold text-foreground truncate">
+            {/* <div className="min-w-0">
+              <div className="text-sm font-semibold text-foreground truncate">
                 CutFlow Video Library
-              </div> */}
+              </div>
               <div className="text-xs text-muted-foreground truncate">
                 {projectName ? `Importing into: ${projectName}` : 'Choose a project to import into'}
               </div>
-            </div>
+            </div> */}
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
@@ -733,7 +733,6 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
 // Fixed by converting the outer wrapper to a <div role="button"> so interactive
 // content can be legitimately nested inside it.
 
-const PREVIEW_CHUNK_BYTES = 512 * 1024;
 const HOVER_PREVIEW_DELAY_MS = 1000;
 
 const BrollCard = memo(function BrollCard({
@@ -747,71 +746,39 @@ const BrollCard = memo(function BrollCard({
 }) {
   const thumb = item.thumbnail_url || (item.type === 'image' ? item.url : null);
 
-  // Hover-to-preview: after a 1s hover, range-fetch the first 512KB of the
-  // video so the preview plays without pulling the whole asset. The debounce
-  // stops a fetch storm when the cursor brushes across many cards.
+  // Hover-to-preview: after a 1s hover debounce, mount a <video> pointed at
+  // the full asset URL and let the browser handle progressive streaming via
+  // native byte-range requests.
   const [hovered, setHovered] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
+  // Once the video starts playing we lock the spinner off — otherwise
+  // subsequent `loadstart` events (which fire on every byte-range chunk for
+  // .mov files and on every loop iteration) would flicker the spinner back on
+  // and make it look like the video is perpetually loading instead of playing.
+  const hasPlayedRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hoverTimerRef = useRef<number | null>(null);
-  const fetchAbortRef = useRef<AbortController | null>(null);
-  const blobUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!hovered || item.type !== 'video') return;
-
-    setPreviewLoading(true);
-    if (fetchAbortRef.current) fetchAbortRef.current.abort();
-    const controller = new AbortController();
-    fetchAbortRef.current = controller;
-
-    fetch(item.url, {
-      headers: { Range: `bytes=0-${PREVIEW_CHUNK_BYTES - 1}` },
-      signal: controller.signal,
-      mode: 'cors',
-      credentials: 'omit',
-    })
-      .then((res) => res.blob())
-      .then((blob) => {
-        if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
-        const url = URL.createObjectURL(blob);
-        blobUrlRef.current = url;
-        setPreviewSrc(url);
-      })
-      .catch(() => {
-        // CORS / network failure — fall back to the full URL and let the
-        // <video> element stream it progressively.
-        if (!controller.signal.aborted) setPreviewSrc(item.url);
-      });
-
-    return () => controller.abort();
-  }, [hovered, item.type, item.url]);
-
-  useEffect(() => {
-    if (item.type !== 'video' || !hovered || !previewSrc) return;
+    if (item.type !== 'video' || !hovered) return;
     const v = videoRef.current;
     if (!v) return;
-    void v.play().catch(() => {});
-  }, [hovered, previewSrc, item.type]);
-
-  useEffect(() => {
-    if (hovered) return;
-    if (fetchAbortRef.current) {
-      fetchAbortRef.current.abort();
-      fetchAbortRef.current = null;
-    }
-    if (blobUrlRef.current) {
-      URL.revokeObjectURL(blobUrlRef.current);
-      blobUrlRef.current = null;
-    }
-    setPreviewSrc(null);
-    setPreviewLoading(false);
-  }, [hovered]);
+    setPreviewLoading(true);
+    hasPlayedRef.current = false;
+    // React sets the `muted` content attribute but not always the IDL property
+    // before the first frame, which makes Chrome's autoplay policy reject
+    // play() with NotAllowedError. Force the property here so muted-autoplay
+    // is reliably allowed.
+    v.muted = true;
+    void v.play().catch(() => {
+      // Silently ignore — the user can scroll/hover to retry. We don't surface
+      // an error because the most common rejection (AbortError when hover ends
+      // before play resolves) is benign.
+    });
+  }, [hovered, item.type]);
 
   useEffect(
     () => () => {
-      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
       if (hoverTimerRef.current !== null) {
         window.clearTimeout(hoverTimerRef.current);
         hoverTimerRef.current = null;
@@ -863,19 +830,29 @@ const BrollCard = memo(function BrollCard({
           </div>
         )}
 
-        {item.type === 'video' && hovered && previewSrc ? (
+        {item.type === 'video' && hovered ? (
           <video
             ref={videoRef}
             className="absolute inset-0 h-full w-full object-cover"
-            src={previewSrc}
+            src={item.url}
             muted
             playsInline
             loop
+            autoPlay
             preload="auto"
             controls={false}
             aria-hidden="true"
-            onCanPlay={() => setPreviewLoading(false)}
-            onPlaying={() => setPreviewLoading(false)}
+            onCanPlay={() => {
+              if (!hasPlayedRef.current) {
+                hasPlayedRef.current = true;
+                setPreviewLoading(false);
+              }
+            }}
+            onPlaying={() => {
+              hasPlayedRef.current = true;
+              setPreviewLoading(false);
+            }}
+            onError={() => setPreviewLoading(false)}
           />
         ) : null}
 
