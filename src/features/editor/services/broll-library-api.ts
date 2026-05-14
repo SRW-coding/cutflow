@@ -67,7 +67,9 @@ function normalizeAssetUrl(assetUrl: string): string {
 let _libraryCache: BrollCategory[] | null = null;
 let _libraryCacheAt = 0;
 const LIBRARY_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const LIBRARY_LS_KEY = 'brolls_library_cache_v1';
+// v2: server now ships only the Beauty + Health and Wellness categories. Bumping
+// the key ensures users with v1 cached locally don't keep seeing the old set.
+const LIBRARY_LS_KEY = 'brolls_library_cache_v2';
 const LIBRARY_LS_MAX_AGE_MS = 24 * 60 * 60 * 1000; // serve from disk up to 24h
 
 interface PersistedLibraryCache {

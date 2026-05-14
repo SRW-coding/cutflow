@@ -8,6 +8,21 @@ import './index.css';
 
 const log = createLogger('App');
 
+// Warm the backend dyno as early as possible. Render free/starter tiers sleep
+// after ~15 min idle; firing /health here (in parallel with bundle parse and
+// React mount) means the dyno starts spinning up before any feature code makes
+// its first API call. Best-effort — failures are silent.
+const apiBase = (import.meta.env.VITE_CUTFLOW_API_BASE_URL as string | undefined)
+  ?.replace(/\/$/, '');
+if (apiBase) {
+  void fetch(`${apiBase}/health`, {
+    method: 'GET',
+    credentials: 'omit',
+    keepalive: true,
+    cache: 'no-store',
+  }).catch(() => {});
+}
+
 // Initialize debug utilities in development mode
 initializeDebugUtils();
 
