@@ -11,7 +11,6 @@ import {
   Play,
   Search,
   User,
-  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { FreeCutLogo } from '@/components/brand/freecut-logo';
@@ -164,11 +163,6 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<
     number | 'all' | 'ai' | 'general'
   >('all');
-
-  const [zoomItem, setZoomItem] = useState<BrollItemWithMeta | null>(null);
-
-  // FIX 6: Ref to imperatively pause video before closing the zoom modal
-  const zoomVideoRef = useRef<HTMLVideoElement>(null);
 
   // FIX 5: Track mount state to guard setState calls after async operations
   const mountedRef = useRef(true);
@@ -367,22 +361,6 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
     },
     [startDownload],
   );
-
-  // FIX 6: Close zoom modal by pausing video first, then clearing state
-  const closeZoom = useCallback(() => {
-    zoomVideoRef.current?.pause();
-    setZoomItem(null);
-  }, []);
-
-  // FIX 6: Keyboard Escape support for the zoom modal
-  useEffect(() => {
-    if (!zoomItem) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeZoom();
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [zoomItem, closeZoom]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -604,7 +582,6 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
                   item={it}
                   downloading={downloadingKey === String(it.id)}
                   onDownload={handleDownload}
-                  onPlay={setZoomItem}
                 />
               ))}
             </div>
@@ -656,61 +633,6 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
           </div>
         )}
       </main>
-
-      {/* ── Zoom modal ── */}
-      {zoomItem && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
-          onClick={closeZoom} // FIX 6: use closeZoom (pauses video first)
-        >
-          <div
-            className="relative w-full max-w-4xl mx-4 rounded-2xl overflow-hidden bg-black shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
-              onClick={closeZoom} // FIX 6: use closeZoom
-              aria-label="Close"
-            >
-              <X className="h-4 w-4" />
-            </button>
-
-            {/* FIX 6: ref attached so closeZoom can pause before unmounting */}
-            <video
-              ref={zoomVideoRef}
-              className="w-full aspect-video object-contain"
-              src={zoomItem.url}
-              autoPlay
-              controls
-              playsInline
-              preload="metadata"
-            />
-
-            <div className="flex items-center justify-between gap-4 px-4 py-3 bg-zinc-900">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-white">{zoomItem.name}</p>
-                <p className="truncate text-xs text-white/50">
-                  {zoomItem.__categoryName} · {zoomItem.__subcategoryName}
-                </p>
-              </div>
-              <Button
-                size="sm"
-                className="shrink-0"
-                onClick={() => handleDownload(zoomItem)}
-                disabled={downloadingKey === String(zoomItem.id)}
-              >
-                {downloadingKey === String(zoomItem.id) ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="mr-2 h-4 w-4" />
-                )}
-                Download
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── Guest auth prompt ── */}
       <Dialog open={guestPromptOpen} onOpenChange={setGuestPromptOpen}>
@@ -818,12 +740,10 @@ const BrollCard = memo(function BrollCard({
   item,
   downloading,
   onDownload,
-  onPlay,
 }: {
   item: BrollItemWithMeta;
   downloading: boolean;
   onDownload: (item: BrollItemWithMeta) => void;
-  onPlay: (item: BrollItemWithMeta) => void;
 }) {
   const thumb = item.thumbnail_url || (item.type === 'image' ? item.url : null);
 
@@ -918,21 +838,7 @@ const BrollCard = memo(function BrollCard({
         setHovered(false);
       }}
     >
-      {/* FIX 1: Changed from <button> to <div role="button"> to allow the
-          download <button> to be a valid nested interactive element. */}
-      <div
-        role="button"
-        tabIndex={0}
-        className="relative aspect-video w-full overflow-hidden bg-muted block cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        onClick={() => onPlay(item)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onPlay(item);
-          }
-        }}
-        aria-label={`Play "${item.name}"`}
-      >
+      <div className="relative aspect-video w-full overflow-hidden bg-muted block">
         {thumb ? (
           <img
             src={thumb}
