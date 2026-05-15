@@ -38,7 +38,7 @@ export function HeaderProfileMenu({
           variant="ghost"
           size="icon"
           className={cn(
-            'h-9 w-9 shrink-0 rounded-full border border-border/80 bg-muted/40 text-muted-foreground hover:bg-muted/70 hover:text-foreground',
+            'h-9 w-9 shrink-0 rounded-full border border-border/80 bg-muted/40 text-muted-foreground hover:bg-muted/70 hover:text-foreground [&_svg]:h-6 [&_svg]:w-6',
             variant === 'admin' && 'border-primary/20 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary'
           )}
           aria-label="Account menu"
