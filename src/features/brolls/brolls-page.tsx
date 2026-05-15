@@ -379,9 +379,9 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
               <div className="text-sm font-bold text-foreground truncate">
                 Cutflow Video Library
               </div>
-              <div className="text-xs text-muted-foreground truncate">
+              {/* <div className="text-xs text-muted-foreground truncate">
                 Choose a project to import into
-              </div>
+              </div> */}
             </div>
           </div>
 
