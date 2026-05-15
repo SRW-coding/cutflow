@@ -82,7 +82,7 @@ function SignupPage() {
             </Link>
           </div>
 
-          <div className="mb-6">
+          <div className="my-2">
             <h2 className="text-2xl font-semibold tracking-tight">Create Account</h2>
           </div>
 
