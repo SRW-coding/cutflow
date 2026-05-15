@@ -82,6 +82,10 @@ function SignupPage() {
             </Link>
           </div>
 
+          <div className="mb-6">
+            <h2 className="text-2xl font-semibold tracking-tight">Create Account</h2>
+          </div>
+
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="signup-name">Name</Label>
