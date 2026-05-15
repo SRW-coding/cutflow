@@ -377,7 +377,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
             </Link>
             <div className="min-w-0">
               <div className="text-sm font-bold text-foreground truncate">
-                B-Roll Library
+                Cutflow Video Library
               </div>
               <div className="text-xs text-muted-foreground truncate">
                 Choose a project to import into
