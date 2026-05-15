@@ -13,7 +13,7 @@ const ACCOUNT_NAV = [
   { to: '/dashboard/plans' as const, label: 'Plans', icon: CreditCard, enabled: true },
   { to: '/dashboard/purchase-history' as const, label: 'Purchase history', icon: History, enabled: true },
   { to: '/dashboard/connected-accounts' as const, label: 'Connected Accounts', icon: Link2, enabled: true },
-  { to: '/dashboard/developers' as const, label: 'Developers', icon: Code2, enabled: true },
+  // { to: '/dashboard/developers' as const, label: 'Developers', icon: Code2, enabled: true },
 ] as const;
 
 export function UserDashboardShell({

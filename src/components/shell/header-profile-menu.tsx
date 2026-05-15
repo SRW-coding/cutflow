@@ -18,7 +18,6 @@ type HeaderProfileMenuProps = {
   profileTo: '/dashboard/profile' | '/admin/profile';
   displayName: string;
   email: string;
-  /** Visually separate admin vs user chrome */
   variant?: 'user' | 'admin';
 };
 
@@ -44,7 +43,7 @@ export function HeaderProfileMenu({
           )}
           aria-label="Account menu"
         >
-          <UserCircle className="h-5 w-5" />
+          <UserCircle className="h-6 w-6" />
           <span className="sr-only">Open account menu</span>
         </Button>
       </DropdownMenuTrigger>
