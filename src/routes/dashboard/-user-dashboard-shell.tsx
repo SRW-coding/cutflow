@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
-import { Code2, CreditCard, History, Link2, User } from 'lucide-react';
+import { CreditCard, History, Link2, User } from 'lucide-react';
 import { Sparkles } from 'lucide-react';
 import { FreeCutLogo } from '@/components/brand/freecut-logo';
 import { HeaderProfileMenu } from '@/components/shell/header-profile-menu';
