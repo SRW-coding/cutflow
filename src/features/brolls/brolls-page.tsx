@@ -5,17 +5,19 @@ import {
   ChevronRight,
   Download,
   LayoutDashboard,
-  LayoutGrid,
   Loader2,
   LogOut,
   Play,
-  Search,
   User,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { FreeCutLogo } from '@/components/brand/freecut-logo';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import {
+  BrollLibraryHeaderSearchAnchor,
+  BrollLibraryHeroSearch,
+} from '@/features/brolls/components/broll-library-search';
+import { useCursorSpotlight } from '@/features/brolls/components/use-cursor-spotlight';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   fetchBrollLibrary,
@@ -41,11 +43,6 @@ import {
 } from '@/components/ui/select';
 import { useAuthStore } from '@/stores/auth-store';
 import { authApi } from '@/infrastructure/api/auth';
-
-// Vite serves anything under `public/` at the URL root without the `public/`
-// prefix, so the file at `public/assets/hero/hero.mp4` is reachable at this URL
-// in both dev and on Vercel.
-const HERO_VIDEO_SRC = '/assets/hero/hero.mp4';
 
 type BrollItemWithMeta = BrollLibraryItem & {
   __categoryId: number;
@@ -75,19 +72,10 @@ type RawCategory = {
 };
 
 type ProcessedLibrary = {
-  categories: Array<{ id: number; name: string; thumbnailUrl: string | null }>;
   items: BrollItemWithMeta[];
 };
 
 function processLibrary(lib: RawCategory[]): ProcessedLibrary {
-  const categories = (lib ?? []).map((c) => {
-    const firstThumb =
-      c.subcategories
-        ?.flatMap((s) => s.items ?? [])
-        .find((it) => Boolean(it.thumbnail_url))?.thumbnail_url ?? null;
-    return { id: c.id, name: c.name, thumbnailUrl: firstThumb };
-  });
-
   const flat: BrollItemWithMeta[] = [];
   for (const cat of lib) {
     for (const sub of cat.subcategories ?? []) {
@@ -103,7 +91,7 @@ function processLibrary(lib: RawCategory[]): ProcessedLibrary {
     }
   }
   shuffleInPlace(flat);
-  return { categories, items: flat };
+  return { items: flat };
 }
 
 function fingerprintLibrary(items: BrollItemWithMeta[]): string {
@@ -156,13 +144,6 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   });
 
   const GUEST_DOWNLOAD_LIMIT = 1;
-  const [categories, setCategories] = useState<
-    Array<{ id: number; name: string; thumbnailUrl: string | null }>
-  >(initialFromCache?.categories ?? []);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | 'all'>('all');
-  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<
-    number | 'all' | 'ai' | 'general'
-  >('all');
 
   // FIX 5: Track mount state to guard setState calls after async operations
   const mountedRef = useRef(true);
@@ -207,7 +188,6 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
           return;
         }
         renderedFingerprintRef.current = nextFp;
-        setCategories(processed.categories);
         setItems(processed.items);
       } catch (e) {
         const message = e instanceof Error ? e.message : 'Failed to load b-roll library.';
@@ -240,16 +220,8 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
 
   const filtered = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
+    if (!q) return items;
     return items.filter((it) => {
-      if (selectedCategoryId !== 'all' && it.__categoryId !== selectedCategoryId) return false;
-      if (selectedSubcategoryId === 'ai') {
-        if (!/ai/i.test(it.__subcategoryName)) return false;
-      } else if (selectedSubcategoryId === 'general') {
-        if (!/general/i.test(it.__subcategoryName)) return false;
-      } else if (selectedSubcategoryId !== 'all' && it.__subcategoryId !== selectedSubcategoryId) {
-        return false;
-      }
-      if (!q) return true;
       const hay = [
         it.name ?? '',
         it.description ?? '',
@@ -260,7 +232,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [items, debouncedQuery, selectedCategoryId, selectedSubcategoryId]);
+  }, [items, debouncedQuery]);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<15 | 30 | 60>(30);
@@ -274,14 +246,9 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
     return () => window.clearTimeout(id);
   }, [query]);
 
-  // FIX 7: Also reset page when selectedSubcategoryId changes (was missing)
   useEffect(() => {
     setPage(1);
-  }, [debouncedQuery, selectedCategoryId, selectedSubcategoryId]);
-
-  useEffect(() => {
-    setSelectedSubcategoryId('all');
-  }, [selectedCategoryId]);
+  }, [debouncedQuery]);
 
   useEffect(() => {
     setPage(1);
@@ -362,11 +329,13 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
     [startDownload],
   );
 
+  const headerSearchAnchorRef = useRef<HTMLDivElement>(null);
+
   return (
     <div className="min-h-screen bg-background">
       {/* ── Header ── */}
-      <header className="panel-header border-b border-border">
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-2 py-5 sm:px-4 lg:px-6">
+      <header className="navbar-frosted sticky top-0 z-50 border-b border-border/50">
+        <div className="mx-auto flex max-w-[1400px] items-center gap-2 px-2 py-3 sm:gap-4 sm:px-4 sm:py-4 lg:px-6">
           <div className="flex items-center gap-4 min-w-0">
             <Link to="/" className="shrink-0">
               <FreeCutLogo
@@ -385,7 +354,9 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <BrollLibraryHeaderSearchAnchor anchorRef={headerSearchAnchorRef} />
+
+          <div className="flex shrink-0 items-center gap-2">
             {isAuthenticated ? (
               <>
                 <Link to="/dashboard">
@@ -430,120 +401,38 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
       </header>
 
       {/* ── Hero ── */}
-      <div className="relative h-[420px] overflow-hidden border-b border-border bg-card/30">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background/60 to-background/90" />
-          <HeroVideo src={HERO_VIDEO_SRC} />
-          <div className="absolute inset-0 bg-background/20 backdrop-blur-[1px]" />
-        </div>
-
-        <div className="relative mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto">
-            <div className="flex w-full items-center overflow-hidden rounded-md bg-black/35 shadow-sm backdrop-blur-sm ring-1 ring-white/10 focus-within:ring-2 focus-within:ring-white/25">
-              <Select value={searchKind} onValueChange={(v) => setSearchKind(v as 'videos')}>
-                <SelectTrigger className="h-14 w-[140px] rounded-none border-0 border-r border-white/10 bg-white/5 text-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="videos">Videos</SelectItem>
-                </SelectContent>
-              </Select>
-              <div className="relative flex-1">
-                <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/70" />
-                <Input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search videos, categories…"
-                  className="h-14 w-full rounded-none border-0 bg-transparent pl-12 pr-12 text-base text-white placeholder:text-white/70 shadow-none focus-visible:ring-0"
-                />
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                className="h-14 rounded-none border-0 border-l border-white/10 bg-white/10 px-4 text-white hover:bg-white/15"
-                onClick={() => setQuery((q) => q)}
-                aria-label="Search"
-              >
-                <Search className="h-5 w-5" />
-              </Button>
-            </div>
+      <div className="hero-velvet relative overflow-hidden border-b border-white/5">
+        <div className="relative mx-auto flex min-h-[560px] max-w-[1400px] flex-col items-center justify-center px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+          <div className="w-full max-w-3xl">
+            <BrollLibraryHeroSearch
+              query={query}
+              onQueryChange={setQuery}
+              searchKind={searchKind}
+              onSearchKindChange={setSearchKind}
+              headerAnchorRef={headerSearchAnchorRef}
+              resultsMeta={
+                <>
+                  <span className="text-xs text-white/80">
+                    {isLoading
+                      ? 'Loading b-roll…'
+                      : `${filtered.length.toLocaleString()} results`}
+                  </span>
+                  {query && !isLoading && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuery('');
+                        setPage(1);
+                      }}
+                      className="text-xs font-medium text-white/70 underline hover:text-white"
+                    >
+                      Clear search
+                    </button>
+                  )}
+                </>
+              }
+            />
           </div>
-
-          <div className="mt-3 flex items-center justify-center gap-3">
-            <span className="text-xs text-white/80">
-              {isLoading ? 'Loading b-roll…' : `${filtered.length.toLocaleString()} results`}
-            </span>
-            {(query || selectedCategoryId !== 'all' || selectedSubcategoryId !== 'all') &&
-              !isLoading && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQuery('');
-                    setSelectedCategoryId('all');
-                    setSelectedSubcategoryId('all');
-                    setPage(1);
-                  }}
-                  className="text-xs font-medium text-white/70 underline hover:text-white"
-                >
-                  Reset filters
-                </button>
-              )}
-          </div>
-
-          {!isLoading && categories.length ? (
-            <section className="mt-6 rounded-lg bg-background/20 p-4 backdrop-blur-sm">
-              <div className="text-sm font-semibold text-foreground">
-                Explore Stock Footage Categories
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
-                <button
-                  type="button"
-                  onClick={() => setSelectedCategoryId('all')}
-                  className={[
-                    'group flex w-full items-center gap-4 rounded-md bg-black/20 p-4 text-left transition-colors hover:bg-white/10',
-                    selectedCategoryId === 'all'
-                      ? 'bg-white/10 ring-1 ring-primary/40'
-                      : 'ring-1 ring-transparent',
-                  ].join(' ')}
-                >
-                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md bg-white/10 grid place-items-center">
-                    <LayoutGrid className="h-7 w-7 text-white/80" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold">All</div>
-                  </div>
-                </button>
-                {categories.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setSelectedCategoryId(c.id)}
-                    className={[
-                      'group flex w-full items-center gap-4 rounded-md bg-black/20 p-4 text-left transition-colors hover:bg-white/10',
-                      selectedCategoryId === c.id
-                        ? 'bg-white/10 ring-1 ring-primary/34'
-                        : 'ring-1 ring-transparent',
-                    ].join(' ')}
-                  >
-                    <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md bg-muted/60">
-                      {c.thumbnailUrl ? (
-                        <img
-                          src={c.thumbnailUrl}
-                          alt={c.name}
-                          className="h-full w-full object-cover"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      ) : null}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold">{c.name}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </section>
-          ) : null}
         </div>
       </div>
 
@@ -569,12 +458,17 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
           </div>
         ) : (
           <div className="space-y-6">
-            <SubcategoryFilters
-              items={items}
-              selectedCategoryId={selectedCategoryId}
-              selectedSubcategoryId={selectedSubcategoryId}
-              onChange={setSelectedSubcategoryId}
-            />
+            <div className="flex flex-wrap items-end justify-between gap-3 pb-1">
+              <div>
+                <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                  Recently Added
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {filtered.length.toLocaleString()} results matching your criteria
+                </p>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
               {pageItems.map((it) => (
                 <BrollCard
@@ -773,16 +667,31 @@ const BrollCard = memo(function BrollCard({
     });
   }, [hovered, item.type]);
 
+  const { rootRef, active, setActive, spotStyle, setSpotFromEvent } =
+    useCursorSpotlight<HTMLDivElement>();
+
   return (
     <div
-      className="group relative overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 text-left"
-      onMouseEnter={() => {
-        if (item.type !== 'video') return;
-        setHovered(true);
+      ref={rootRef}
+      style={spotStyle}
+      onPointerMove={setSpotFromEvent}
+      onPointerEnter={(e) => {
+        setActive(true);
+        setSpotFromEvent(e);
+        if (item.type === 'video') setHovered(true);
       }}
-      onMouseLeave={() => setHovered(false)}
+      onPointerLeave={() => {
+        setActive(false);
+        setHovered(false);
+      }}
+      className={[
+        'broll-card-spotlight group relative isolate overflow-hidden rounded-xl border border-border bg-card text-left shadow-sm',
+        active && 'is-spotlight-active',
+      ]
+        .filter(Boolean)
+        .join(' ')}
     >
-      <div className="relative aspect-video w-full overflow-hidden bg-muted block">
+      <div className="relative z-[3] aspect-video w-full overflow-hidden bg-muted block">
         {thumb ? (
           <img
             src={thumb}
@@ -850,27 +759,14 @@ const BrollCard = memo(function BrollCard({
           )}
         </div>
 
-        {/* Download overlay — now a valid <button> inside a <div role="button"> */}
+        {/* Download overlay — uses cursor-spotlight for the same hover glow as the search bar */}
         <div className="absolute bottom-0 left-0 right-0 p-3 pointer-events-none opacity-0 translate-y-1 transition-all duration-200 group-hover:pointer-events-auto group-hover:opacity-100 group-hover:translate-y-0">
           <div className="flex items-end justify-end gap-2">
-            <button
-              type="button"
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-black/50 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/65 disabled:cursor-not-allowed disabled:opacity-70"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation(); // Now works correctly — not inside another <button>
-                onDownload(item);
-              }}
-              disabled={downloading}
-              title={`Download "${item.name}"`}
-            >
-              {downloading ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Download className="h-3.5 w-3.5" />
-              )}
-              {downloading ? 'Downloading…' : 'Download'}
-            </button>
+            <DownloadButton
+              downloading={downloading}
+              onClick={() => onDownload(item)}
+              title={item.name}
+            />
           </div>
         </div>
       </div>
@@ -878,40 +774,56 @@ const BrollCard = memo(function BrollCard({
   );
 });
 
-// ─── HeroVideo ────────────────────────────────────────────────────────────────
-// The hero video used to mount with `autoPlay`, which overrides `preload="none"`
-// and makes the browser start downloading video bytes alongside the library API.
-// We now render the <video> element immediately (so it always appears in the
-// DOM) but defer playback: no `autoPlay`, `preload="none"`, and we only call
-// .play() after a short delay. That preserves the bandwidth saving of the
-// deferred-load idea without any way for the element to fail to appear in prod.
+// ─── DownloadButton ───────────────────────────────────────────────────────────
+// Reuses the same cursor-following spotlight glow as the hero search bar so the
+// download CTA on every video feels visually consistent with the rest of the UI.
 
-function HeroVideo({ src }: { src: string }) {
-  const ref = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    const t = window.setTimeout(() => {
-      const v = ref.current;
-      if (!v) return;
-      // Muted + playsInline videos are allowed to play programmatically in all
-      // modern browsers. We swallow any rejection in case a browser policy
-      // blocks it — the visible poster frame is still there as a fallback.
-      void v.play().catch(() => {});
-    }, 1200);
-    return () => window.clearTimeout(t);
-  }, []);
+function DownloadButton({
+  downloading,
+  onClick,
+  title,
+}: {
+  downloading: boolean;
+  onClick: () => void;
+  title: string;
+}) {
+  const { rootRef, active, setActive, spotStyle, setSpotFromEvent } =
+    useCursorSpotlight<HTMLButtonElement>();
 
   return (
-    <video
-      ref={ref}
-      className="absolute inset-0 h-full w-full object-cover"
-      src={src}
-      muted
-      loop
-      playsInline
-      preload="none"
-      aria-hidden="true"
-    />
+    <button
+      ref={rootRef}
+      type="button"
+      style={{ ...spotStyle, ['--spot-size' as string]: '110px' }}
+      onPointerMove={setSpotFromEvent}
+      onPointerEnter={(e) => {
+        setActive(true);
+        setSpotFromEvent(e);
+      }}
+      onPointerLeave={() => setActive(false)}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick();
+      }}
+      disabled={downloading}
+      title={`Download "${title}"`}
+      className={[
+        'cursor-spotlight relative isolate inline-flex cursor-pointer items-center gap-1.5 overflow-hidden rounded-full border border-white/10 bg-black/55 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/65 disabled:cursor-not-allowed disabled:opacity-70',
+        active && 'is-spotlight-active',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <span className="relative z-10 inline-flex items-center gap-1.5">
+        {downloading ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <Download className="h-3.5 w-3.5" />
+        )}
+        {downloading ? 'Downloading…' : 'Download'}
+      </span>
+    </button>
   );
 }
 
@@ -934,111 +846,6 @@ function BrollGridSkeleton() {
           </div>
         </div>
       ))}
-    </div>
-  );
-}
-
-// ─── SubcategoryFilters ───────────────────────────────────────────────────────
-// FIX 8: The overflow <Select> was duplicating items already shown as visible
-// pills (AI, General). Fixed by only rendering items in the overflow dropdown
-// that are not already rendered as visible pill buttons above.
-
-function SubcategoryFilters({
-  items,
-  selectedCategoryId,
-  selectedSubcategoryId,
-  onChange,
-}: {
-  items: BrollItemWithMeta[];
-  selectedCategoryId: number | 'all';
-  selectedSubcategoryId: number | 'all' | 'ai' | 'general';
-  onChange: (id: number | 'all' | 'ai' | 'general') => void;
-}) {
-  const subs = useMemo(() => {
-    const map = new Map<number, string>();
-    for (const it of items) {
-      if (selectedCategoryId !== 'all' && it.__categoryId !== selectedCategoryId) continue;
-      map.set(it.__subcategoryId, it.__subcategoryName);
-    }
-    const all = [...map.entries()]
-      .map(([id, name]) => ({ id, name }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-
-    const ai = all.filter((s) => /ai/i.test(s.name));
-    const general = all.filter((s) => /general/i.test(s.name));
-    const rest = all.filter((s) => !/ai/i.test(s.name) && !/general/i.test(s.name));
-    return [
-      ...(ai.length ? [{ id: 'ai' as const, name: 'AI' }] : []),
-      ...(general.length ? [{ id: 'general' as const, name: 'General' }] : []),
-      ...rest,
-    ];
-  }, [items, selectedCategoryId]);
-
-  // Items shown as visible pill buttons (always rendered regardless of overflow)
-  const visiblePills = subs.slice(0, 7);
-  // IDs of items already shown as pills — used to de-duplicate the overflow dropdown
-  const visiblePillIds = new Set(visiblePills.map((s) => String(s.id)));
-  // FIX 8: Only items NOT already rendered as pills go into the overflow select
-  const overflowItems = subs.slice(7).filter((s) => !visiblePillIds.has(String(s.id)));
-
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <button
-        type="button"
-        onClick={() => onChange('all')}
-        className={[
-          'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors',
-          selectedSubcategoryId === 'all'
-            ? 'border-primary/40 bg-primary/10 text-primary'
-            : 'border-border bg-background/50 hover:bg-muted/40',
-        ].join(' ')}
-      >
-        <Search className="h-4 w-4" />
-        All
-      </button>
-      {visiblePills.map((s) => (
-        <button
-          key={s.id}
-          type="button"
-          onClick={() => onChange(s.id)}
-          className={[
-            'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors',
-            selectedSubcategoryId === s.id
-              ? 'border-primary/40 bg-primary/10 text-primary'
-              : 'border-border bg-background/50 hover:bg-muted/40',
-          ].join(' ')}
-        >
-          <Search className="h-4 w-4" />
-          {s.name}
-        </button>
-      ))}
-      {/* FIX 8: Only render the overflow select when there are truly extra items */}
-      {overflowItems.length > 0 ? (
-        <Select
-          value={
-            // Only show a value in the select if the active filter is one of the overflow items
-            overflowItems.some((s) => String(s.id) === String(selectedSubcategoryId))
-              ? String(selectedSubcategoryId)
-              : ''
-          }
-          onValueChange={(v) =>
-            onChange(
-              v === 'all' ? 'all' : v === 'ai' ? 'ai' : v === 'general' ? 'general' : Number(v),
-            )
-          }
-        >
-          <SelectTrigger className="h-9 w-[140px] rounded-full bg-background/50">
-            <SelectValue placeholder="More…" />
-          </SelectTrigger>
-          <SelectContent className="w-[220px] max-h-64 overflow-y-auto">
-            {overflowItems.map((s) => (
-              <SelectItem key={s.id} value={String(s.id)}>
-                {s.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ) : null}
     </div>
   );
 }

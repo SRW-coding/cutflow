@@ -25,7 +25,8 @@
 
     /* Primary - Orange accent (playback, active states) */
     --primary: oklch(54.179% 0.22292 332.367);             /* #FF8C3A - Vibrant orange */
-    --primary-foreground: oklch(0.12 0 0);      /* Dark text on primary */
+    --primary-foreground: oklch(0.95 0 0);            /* #f2f2f2 - Primary text */
+    /* --primary-foreground: oklch(0.12 0 0);      Dark text on primary */
 
     /* Secondary - Subtle panel variation */
     --secondary: oklch(0.22 0 0);               /* #383838 - Secondary surfaces */
@@ -64,6 +65,9 @@
     --sidebar-ring: oklch(55.515% 0.2017 331.394);
 
     --radius: 0.5rem;
+
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
   }
 }
 
@@ -80,7 +84,9 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    letter-spacing: -0.011em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     user-select: none;
@@ -99,7 +105,7 @@
   pre,
   .font-mono,
   [data-mono] {
-    font-family: 'IBM Plex Mono', 'Consolas', 'Monaco', monospace;
+    font-family: var(--font-mono);
   }
 
   /* Disable smooth scrolling globally - timeline needs instant response for zoom */
@@ -184,6 +190,42 @@
     background-color: oklch(var(--panel-header));
   }
 
+  /* Hero — static deep-galactic gradient washed in primary pink */
+  .hero-velvet {
+    background-color: #0f0f0f;
+    background-image:
+      radial-gradient(
+        ellipse 80% 60% at 50% -10%,
+        oklch(54.179% 0.22292 332.367 / 0.34) 0%,
+        oklch(54.179% 0.22292 332.367 / 0.16) 30%,
+        rgba(15, 15, 15, 0) 60%
+      ),
+      radial-gradient(
+        ellipse 40% 50% at 12% 30%,
+        oklch(54.179% 0.22292 332.367 / 0.2) 0%,
+        rgba(15, 15, 15, 0) 70%
+      ),
+      radial-gradient(
+        ellipse 40% 50% at 88% 70%,
+        oklch(54.179% 0.22292 332.367 / 0.16) 0%,
+        rgba(15, 15, 15, 0) 70%
+      ),
+      linear-gradient(180deg, oklch(0.18 0.07 332) 0%, #131313 55%, #0f0f0f 100%);
+  }
+
+  /* Frosted sticky nav (X.com For You / Following tab style) */
+  .navbar-frosted {
+    background-color: oklch(0.12 0 0 / 0.78);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    backdrop-filter: blur(16px) saturate(180%);
+  }
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .navbar-frosted {
+      background-color: oklch(var(--panel-header));
+    }
+  }
+
   .timeline-bg {
     background-color: oklch(var(--timeline-bg));
   }
@@ -200,6 +242,124 @@
 
   .glow-primary-sm {
     box-shadow: 0 0 6px oklch(var(--primary) / 0.25);
+  }
+
+  /* Cursor-following spotlight (aether.mom style). Tune size with --spot-size. */
+  .cursor-spotlight {
+    --spot-x: 50%;
+    --spot-y: 50%;
+    --spot-size: 170px;
+    --spot-opacity: 0;
+  }
+
+  .cursor-spotlight::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    opacity: var(--spot-opacity);
+    transition: opacity 0.2s ease;
+    background: radial-gradient(
+      var(--spot-size) circle at var(--spot-x) var(--spot-y),
+      oklch(54.179% 0.22292 332.367 / 0.42),
+      oklch(54.179% 0.22292 332.367 / 0.12) 30%,
+      transparent 55%
+    );
+    pointer-events: none;
+  }
+
+  .cursor-spotlight::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    z-index: 0;
+    border-radius: inherit;
+    opacity: var(--spot-opacity);
+    transition: opacity 0.2s ease;
+    background: radial-gradient(
+      calc(var(--spot-size) * 0.83) circle at var(--spot-x) var(--spot-y),
+      oklch(72% 0.18 332 / 0.9),
+      oklch(54.179% 0.22292 332.367 / 0.35) 24%,
+      transparent 52%
+    );
+    padding: 1px;
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .cursor-spotlight.is-spotlight-active,
+  .cursor-spotlight:focus-within {
+    --spot-opacity: 1;
+  }
+
+  /* B-roll video card — cursor-side edge glow (shadow follows pointer) */
+  .broll-card-spotlight {
+    --spot-size: 140px;
+    --spot-opacity: 0;
+    --glow-sx: 0px;
+    --glow-sy: 0px;
+    transition:
+      border-color 0.18s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .broll-card-spotlight::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: inherit;
+    opacity: var(--spot-opacity);
+    transition: opacity 0.18s ease;
+    background: radial-gradient(
+      var(--spot-size) circle at var(--spot-x) var(--spot-y),
+      oklch(54.179% 0.22292 332.367 / 0.28),
+      oklch(54.179% 0.22292 332.367 / 0.08) 32%,
+      transparent 52%
+    );
+    pointer-events: none;
+  }
+
+  .broll-card-spotlight::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    z-index: 2;
+    border-radius: inherit;
+    opacity: var(--spot-opacity);
+    transition: opacity 0.18s ease;
+    background: radial-gradient(
+      calc(var(--spot-size) * 0.7) circle at var(--spot-x) var(--spot-y),
+      oklch(72% 0.18 332 / 0.85),
+      oklch(54.179% 0.22292 332.367 / 0.4) 26%,
+      transparent 48%
+    );
+    padding: 1px;
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .broll-card-spotlight.is-spotlight-active {
+    --spot-opacity: 1;
+    border-color: oklch(54.179% 0.22292 332.367 / 0.35);
+    box-shadow:
+      var(--glow-sx) var(--glow-sy) 18px -6px oklch(54.179% 0.22292 332.367 / 0.45),
+      var(--glow-sx) var(--glow-sy) 34px -12px oklch(54.179% 0.22292 332.367 / 0.18);
   }
 
   /* Text shadows for better readability on dark */
