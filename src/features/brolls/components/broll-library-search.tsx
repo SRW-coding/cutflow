@@ -87,6 +87,7 @@ type BrollSearchBarProps = {
   activeFilterCount: number;
   compact: boolean;
   variant: 'hero' | 'header';
+  dockedToNavbar: boolean;
 };
 
 function BrollSearchBar({
@@ -99,6 +100,7 @@ function BrollSearchBar({
   activeFilterCount,
   compact,
   variant,
+  dockedToNavbar,
 }: BrollSearchBarProps) {
   const isHero = variant === 'hero';
   const barHeight = compact ? 'h-10' : 'h-14';
@@ -191,6 +193,7 @@ function BrollSearchBar({
         compact={compact}
         isHero={isHero}
         barHeight={barHeight}
+        dockedToNavbar={dockedToNavbar}
       />
       </div>
     </div>
@@ -223,7 +226,8 @@ export function BrollLibraryHeroSearch({
   const heroAnchorRef = useRef<HTMLDivElement>(null);
   const { progress, floatingStyle } = useMorphSearchPosition(heroAnchorRef, headerAnchorRef);
   const compact = progress > 0.55;
-  const variant: 'hero' | 'header' = progress > 0.82 ? 'header' : 'hero';
+  const dockedToNavbar = progress > 0.82;
+  const variant: 'hero' | 'header' = dockedToNavbar ? 'header' : 'hero';
   const headingOpacity = Math.max(0, 1 - progress * 1.8);
   // const resultsOpacity = Math.max(0, 1 - progress * 2.2);
 
@@ -270,6 +274,7 @@ export function BrollLibraryHeroSearch({
           activeFilterCount={activeFilterCount}
           compact={compact}
           variant={variant}
+          dockedToNavbar={dockedToNavbar}
         />
       </div>
     </>

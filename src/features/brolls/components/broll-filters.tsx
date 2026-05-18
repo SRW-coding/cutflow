@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Filter, Search } from 'lucide-react';
+import { ChevronDown, Filter, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -42,6 +42,8 @@ type BrollFiltersProps = {
   compact: boolean;
   isHero: boolean;
   barHeight: string;
+  /** When true (search bar docked in navbar), the popover closes. */
+  dockedToNavbar?: boolean;
 };
 
 export function BrollFilters({
@@ -51,9 +53,11 @@ export function BrollFilters({
   compact,
   isHero,
   barHeight,
+  dockedToNavbar = false,
 }: BrollFiltersProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<BrollFilterValues>(value);
+  const [nationalityOpen, setNationalityOpen] = useState(false);
   const [nationalitySearch, setNationalitySearch] = useState('');
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const scrollBodyRef = useRef<HTMLDivElement | null>(null);
@@ -61,8 +65,16 @@ export function BrollFilters({
   const [panelSide, setPanelSide] = useState<'top' | 'bottom'>('bottom');
 
   useEffect(() => {
-    if (!open) setDraft(value);
+    if (!open) {
+      setDraft(value);
+      setNationalityOpen(false);
+      setNationalitySearch('');
+    }
   }, [open, value]);
+
+  useEffect(() => {
+    if (dockedToNavbar) setOpen(false);
+  }, [dockedToNavbar]);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -202,7 +214,7 @@ export function BrollFilters({
         <div
           ref={scrollBodyRef}
           data-broll-scroll-body="true"
-          className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-4"
+          className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4"
         >
           <FilterSection title="Gender">
             <SegmentedOptions
@@ -213,53 +225,6 @@ export function BrollFilters({
               ]}
               onSelect={(selectedValue) => setSingleFilter('gender', selectedValue)}
             />
-          </FilterSection>
-
-          <FilterSection title="Nationality">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={nationalitySearch}
-                onChange={(event) => setNationalitySearch(event.target.value)}
-                placeholder="Search countries..."
-                aria-label="Search nationalities"
-                className="h-9 pl-9"
-              />
-            </div>
-            <div
-              data-broll-nested-scroll="true"
-              className="max-h-52 overflow-y-auto overscroll-contain rounded-md border border-border bg-background/40 p-1"
-            >
-              {filteredNationalities.length ? (
-                filteredNationalities.map((option) => {
-                  const checked = draft.nationalities.includes(option.value);
-                  return (
-                    <label
-                      key={option.value}
-                      className={cn(
-                        'flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm transition-colors hover:bg-muted',
-                        checked && 'bg-primary/10 text-primary hover:bg-primary/15',
-                      )}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleNationality(option.value)}
-                        className="h-4 w-4 rounded border-border accent-primary"
-                      />
-                      <span className="text-base leading-none" aria-hidden>
-                        {option.flag}
-                      </span>
-                      <span>{option.label}</span>
-                    </label>
-                  );
-                })
-              ) : (
-                <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-                  No countries found.
-                </div>
-              )}
-            </div>
           </FilterSection>
 
           <FilterSection title="Skin">
@@ -314,6 +279,62 @@ export function BrollFilters({
               </div>
             ) : null}
           </FilterSection>
+
+          <CollapsibleFilterSection
+            title="Nationality"
+            open={nationalityOpen}
+            onOpenChange={setNationalityOpen}
+            hint={
+              draft.nationalities.length
+                ? `${draft.nationalities.length} selected`
+                : undefined
+            }
+          >
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={nationalitySearch}
+                onChange={(event) => setNationalitySearch(event.target.value)}
+                placeholder="Search countries..."
+                aria-label="Search nationalities"
+                className="h-9 pl-9"
+              />
+            </div>
+            <div
+              data-broll-nested-scroll="true"
+              className="max-h-52 overflow-y-auto overscroll-contain rounded-md border border-border bg-background/40 p-1"
+            >
+              {filteredNationalities.length ? (
+                filteredNationalities.map((option) => {
+                  const checked = draft.nationalities.includes(option.value);
+                  return (
+                    <label
+                      key={option.value}
+                      className={cn(
+                        'flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm transition-colors hover:bg-muted',
+                        checked && 'bg-primary/10 text-primary hover:bg-primary/15',
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleNationality(option.value)}
+                        className="h-4 w-4 rounded border-border accent-primary"
+                      />
+                      <span className="text-base leading-none" aria-hidden>
+                        {option.flag}
+                      </span>
+                      <span>{option.label}</span>
+                    </label>
+                  );
+                })
+              ) : (
+                <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                  No countries found.
+                </div>
+              )}
+            </div>
+          </CollapsibleFilterSection>
         </div>
 
         <div className="shrink-0 border-t border-border bg-card p-4">
@@ -334,6 +355,48 @@ export function BrollFilters({
     </Popover>
   );
 }
+
+function CollapsibleFilterSection({
+  title,
+  open,
+  onOpenChange,
+  hint,
+  children,
+}: {
+  title: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-2.5">
+      <button
+        type="button"
+        onClick={() => onOpenChange(!open)}
+        className="flex w-full items-center justify-between gap-2 rounded-md text-left transition-colors hover:bg-muted/40"
+        aria-expanded={open}
+      >
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {title}
+        </span>
+        <span className="flex items-center gap-2">
+          {hint ? (
+            <span className="text-xs font-medium normal-case text-primary">{hint}</span>
+          ) : null}
+          <ChevronDown
+            className={cn(
+              'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
+              open && 'rotate-180',
+            )}
+          />
+        </span>
+      </button>
+      {open ? <div className="space-y-2.5">{children}</div> : null}
+    </section>
+  );
+}
+
 
 function FilterSection({ title, children }: { title: string; children: ReactNode }) {
   return (
