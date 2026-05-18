@@ -11,6 +11,8 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/shared/ui/cn';
 import { useCursorSpotlight } from '@/features/brolls/components/use-cursor-spotlight';
+import { BrollFilters } from '@/features/brolls/components/broll-filters';
+import type { BrollFilterValues } from '@/features/brolls/components/broll-filter-model';
 
 function smoothstep(t: number): number {
   const x = Math.min(1, Math.max(0, t));
@@ -80,6 +82,9 @@ type BrollSearchBarProps = {
   onQueryChange: (value: string) => void;
   searchKind: 'videos';
   onSearchKindChange: (value: 'videos') => void;
+  filters: BrollFilterValues;
+  onFiltersApply: (value: BrollFilterValues) => void;
+  activeFilterCount: number;
   compact: boolean;
   variant: 'hero' | 'header';
 };
@@ -89,6 +94,9 @@ function BrollSearchBar({
   onQueryChange,
   searchKind,
   onSearchKindChange,
+  filters,
+  onFiltersApply,
+  activeFilterCount,
   compact,
   variant,
 }: BrollSearchBarProps) {
@@ -166,7 +174,7 @@ function BrollSearchBar({
         size="sm"
         className={cn(
           barHeight,
-          'rounded-none border-0 border-l  px-3 sm:px-4',
+          'shrink-0 rounded-none border-0 border-l px-3 sm:px-4',
           isHero
             ? 'border-white/10 bg-white/10 text-white hover:bg-white/15'
             : 'border-border text-foreground hover:bg-muted',
@@ -176,6 +184,14 @@ function BrollSearchBar({
       >
         Search
       </Button>
+      <BrollFilters
+        value={filters}
+        onApply={onFiltersApply}
+        activeCount={activeFilterCount}
+        compact={compact}
+        isHero={isHero}
+        barHeight={barHeight}
+      />
       </div>
     </div>
   );
@@ -186,6 +202,9 @@ type BrollLibrarySearchShellProps = {
   onQueryChange: (value: string) => void;
   searchKind: 'videos';
   onSearchKindChange: (value: 'videos') => void;
+  filters: BrollFilterValues;
+  onFiltersApply: (value: BrollFilterValues) => void;
+  activeFilterCount: number;
   resultsMeta: ReactNode;
   headerAnchorRef: React.RefObject<HTMLDivElement | null>;
 };
@@ -195,6 +214,9 @@ export function BrollLibraryHeroSearch({
   onQueryChange,
   searchKind,
   onSearchKindChange,
+  filters,
+  onFiltersApply,
+  activeFilterCount,
   // resultsMeta,
   headerAnchorRef,
 }: BrollLibrarySearchShellProps) {
@@ -243,6 +265,9 @@ export function BrollLibraryHeroSearch({
           onQueryChange={onQueryChange}
           searchKind={searchKind}
           onSearchKindChange={onSearchKindChange}
+          filters={filters}
+          onFiltersApply={onFiltersApply}
+          activeFilterCount={activeFilterCount}
           compact={compact}
           variant={variant}
         />

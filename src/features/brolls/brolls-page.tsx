@@ -17,6 +17,12 @@ import {
   BrollLibraryHeaderSearchAnchor,
   BrollLibraryHeroSearch,
 } from '@/features/brolls/components/broll-library-search';
+import {
+  BROLL_NATIONALITY_OPTIONS,
+  EMPTY_BROLL_FILTERS,
+  countBrollFilters,
+  type BrollFilterValues,
+} from '@/features/brolls/components/broll-filter-model';
 import { useCursorSpotlight } from '@/features/brolls/components/use-cursor-spotlight';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -49,6 +55,13 @@ type BrollItemWithMeta = BrollLibraryItem & {
   __categoryName: string;
   __subcategoryId: number;
   __subcategoryName: string;
+};
+
+type FilterableBrollFields = {
+  age?: unknown;
+  gender?: unknown;
+  nationality?: unknown;
+  skin?: unknown;
 };
 
 function shuffleInPlace<T>(arr: T[]): T[] {
@@ -104,6 +117,49 @@ function fingerprintLibrary(items: BrollItemWithMeta[]): string {
   return hash;
 }
 
+function fieldAsText(value: unknown): string {
+  if (typeof value === 'string') return value.toLowerCase();
+  if (typeof value === 'number') return String(value);
+  if (Array.isArray(value)) return value.map(fieldAsText).join(' ');
+  return '';
+}
+
+function fieldAsAge(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function matchesBrollFilters(item: BrollItemWithMeta, filters: BrollFilterValues): boolean {
+  const filterable = item as BrollItemWithMeta & FilterableBrollFields;
+
+  if (filters.gender && !fieldAsText(filterable.gender).includes(filters.gender)) return false;
+  if (filters.skin && !fieldAsText(filterable.skin).includes(filters.skin)) return false;
+
+  if (filters.nationalities.length) {
+    const nationality = fieldAsText(filterable.nationality);
+    if (!nationality) return false;
+    const matchesNationality = filters.nationalities.some((value) => {
+      const option = BROLL_NATIONALITY_OPTIONS.find((candidate) => candidate.value === value);
+      const terms = option ? [option.value, option.label, ...option.terms] : [value];
+      return terms.some((term) => nationality.includes(term.toLowerCase()));
+    });
+    if (!matchesNationality) return false;
+  }
+
+  if (filters.minAge || filters.maxAge) {
+    const age = fieldAsAge(filterable.age);
+    if (age === null) return false;
+    if (filters.minAge && age < Number(filters.minAge)) return false;
+    if (filters.maxAge && age > Number(filters.maxAge)) return false;
+  }
+
+  return true;
+}
+
 export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
@@ -120,6 +176,9 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [searchKind, setSearchKind] = useState<'videos'>('videos');
+  const [appliedFilters, setAppliedFilters] =
+    useState<BrollFilterValues>(EMPTY_BROLL_FILTERS);
+  const activeFilterCount = useMemo(() => countBrollFilters(appliedFilters), [appliedFilters]);
 
   // Seed state from the persisted cache so repeat visits paint instantly
   // instead of waiting on the network. We still revalidate in the effect below.
@@ -220,19 +279,22 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
 
   const filtered = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
-    if (!q) return items;
     return items.filter((it) => {
-      const hay = [
-        it.name ?? '',
-        it.description ?? '',
-        it.__categoryName ?? '',
-        it.__subcategoryName ?? '',
-      ]
-        .join(' ')
-        .toLowerCase();
-      return hay.includes(q);
+      if (q) {
+        const hay = [
+          it.name ?? '',
+          it.description ?? '',
+          it.__categoryName ?? '',
+          it.__subcategoryName ?? '',
+        ]
+          .join(' ')
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+
+      return matchesBrollFilters(it, appliedFilters);
     });
-  }, [items, debouncedQuery]);
+  }, [items, debouncedQuery, appliedFilters]);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<15 | 30 | 60>(30);
@@ -248,7 +310,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedQuery]);
+  }, [debouncedQuery, appliedFilters]);
 
   useEffect(() => {
     setPage(1);
@@ -409,6 +471,9 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
               onQueryChange={setQuery}
               searchKind={searchKind}
               onSearchKindChange={setSearchKind}
+              filters={appliedFilters}
+              onFiltersApply={setAppliedFilters}
+              activeFilterCount={activeFilterCount}
               headerAnchorRef={headerSearchAnchorRef}
               resultsMeta={
                 <>
@@ -453,7 +518,9 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
           <div className="max-w-3xl mx-auto">
             <div className="rounded-xl border border-border bg-card p-10 text-center">
               <div className="text-lg font-semibold">No matches</div>
-              <div className="mt-2 text-sm text-muted-foreground">Try a different search term.</div>
+              <div className="mt-2 text-sm text-muted-foreground">
+                Try a different search term or filter.
+              </div>
             </div>
           </div>
         ) : (
