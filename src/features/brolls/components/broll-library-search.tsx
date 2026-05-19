@@ -11,8 +11,6 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/shared/ui/cn';
 import { useCursorSpotlight } from '@/features/brolls/components/use-cursor-spotlight';
-import { BrollFilters } from '@/features/brolls/components/broll-filters';
-import type { BrollFilterValues } from '@/features/brolls/components/broll-filter-model';
 
 function smoothstep(t: number): number {
   const x = Math.min(1, Math.max(0, t));
@@ -82,12 +80,9 @@ type BrollSearchBarProps = {
   onQueryChange: (value: string) => void;
   searchKind: 'videos';
   onSearchKindChange: (value: 'videos') => void;
-  filters: BrollFilterValues;
-  onFiltersApply: (value: BrollFilterValues) => void;
-  activeFilterCount: number;
   compact: boolean;
   variant: 'hero' | 'header';
-  dockedToNavbar: boolean;
+  themeMode: 'light' | 'dark';
 };
 
 function BrollSearchBar({
@@ -95,15 +90,13 @@ function BrollSearchBar({
   onQueryChange,
   searchKind,
   onSearchKindChange,
-  filters,
-  onFiltersApply,
-  activeFilterCount,
   compact,
   variant,
-  dockedToNavbar,
+  themeMode,
 }: BrollSearchBarProps) {
   const isHero = variant === 'hero';
-  const barHeight = compact ? 'h-10' : 'h-14';
+  const isDark = themeMode === 'dark';
+  const barHeight = compact ? 'h-10' : 'h-[54px]';
   const iconSize = compact ? 'h-4 w-4' : 'h-5 w-5';
   const inputPad = compact ? 'pl-10 pr-10 text-sm' : 'pl-12 pr-12 text-base';
   const iconLeft = compact ? 'left-3' : 'left-4';
@@ -121,11 +114,10 @@ function BrollSearchBar({
       }}
       onPointerLeave={() => setActive(false)}
       className={cn(
-        'cursor-spotlight group/search relative isolate flex w-full items-center overflow-hidden rounded-lg transition-[border-radius,background] duration-300',
+        'cursor-spotlight group/search relative isolate flex w-full items-center overflow-hidden rounded-md shadow-[0_12px_34px_rgba(0,0,0,0.28)] ring-1 transition-[border-radius,background] duration-300',
+        isDark ? 'bg-[#151515] text-white ring-white/15' : 'bg-white text-[#111] ring-black/10',
         active && 'is-spotlight-active',
-        isHero
-          ? 'bg-black/35 shadow-sm backdrop-blur-md ring-1 ring-white/10'
-          : 'bg-card/95 shadow-md backdrop-blur-md ring-1 ring-border',
+        !isHero && 'shadow-md',
         barHeight,
       )}
     >
@@ -135,15 +127,19 @@ function BrollSearchBar({
           <SelectTrigger
             className={cn(
               barHeight,
-              'w-[120px] rounded-none border-0 border-r sm:w-[140px]',
-              isHero
-                ? 'border-white/10 bg-white/5 text-white'
-                : 'border-border bg-muted/40 text-foreground',
+              'w-[120px] rounded-none border-0 border-r shadow-none sm:w-[140px]',
+              isDark
+                ? 'border-white/15 bg-[#151515] text-white hover:bg-[#202020]'
+                : 'border-[#d8d8d8] bg-white text-[#111] hover:bg-[#f7f7f7]',
             )}
           >
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent
+            className={cn(
+              isDark ? 'border-white/15 bg-[#151515] text-white' : 'border-[#d6d6d6] bg-white text-[#111]',
+            )}
+          >
             <SelectItem value="videos">Videos</SelectItem>
           </SelectContent>
         </Select>
@@ -154,7 +150,7 @@ function BrollSearchBar({
             'pointer-events-none absolute top-1/2 -translate-y-1/2',
             iconSize,
             iconLeft,
-            isHero ? 'text-white/70' : 'text-muted-foreground',
+            isDark ? 'text-white/55' : 'text-[#707070]',
           )}
         />
         <Input
@@ -163,11 +159,9 @@ function BrollSearchBar({
           placeholder="Search videos…"
           className={cn(
             barHeight,
-            'w-full rounded-none border-0 bg-transparent shadow-none focus-visible:ring-0',
+            'w-full rounded-none border-0 shadow-none focus-visible:ring-0',
             inputPad,
-            isHero
-              ? 'text-white placeholder:text-white/70'
-              : 'text-foreground placeholder:text-muted-foreground',
+            isDark ? 'bg-[#151515] text-white placeholder:text-white/45' : 'bg-white text-[#111] placeholder:text-[#777]',
           )}
         />
       </div>
@@ -176,25 +170,14 @@ function BrollSearchBar({
         size="sm"
         className={cn(
           barHeight,
-          'shrink-0 rounded-none border-0 border-l px-3 sm:px-4',
-          isHero
-            ? 'border-white/10 bg-white/10 text-white hover:bg-white/15'
-            : 'border-border text-foreground hover:bg-muted',
+          'shrink-0 rounded-none border-0 bg-[#ef3340] px-3 font-semibold text-white hover:bg-[#d92734] sm:px-5',
         )}
         onClick={() => onQueryChange(query)}
         aria-label="Search"
       >
-        Search
+        <Search className="h-5 w-5" />
+        <span className="sr-only">Search</span>
       </Button>
-      <BrollFilters
-        value={filters}
-        onApply={onFiltersApply}
-        activeCount={activeFilterCount}
-        compact={compact}
-        isHero={isHero}
-        barHeight={barHeight}
-        dockedToNavbar={dockedToNavbar}
-      />
       </div>
     </div>
   );
@@ -205,11 +188,9 @@ type BrollLibrarySearchShellProps = {
   onQueryChange: (value: string) => void;
   searchKind: 'videos';
   onSearchKindChange: (value: 'videos') => void;
-  filters: BrollFilterValues;
-  onFiltersApply: (value: BrollFilterValues) => void;
-  activeFilterCount: number;
   resultsMeta: ReactNode;
   headerAnchorRef: React.RefObject<HTMLDivElement | null>;
+  themeMode: 'light' | 'dark';
 };
 
 export function BrollLibraryHeroSearch({
@@ -217,11 +198,9 @@ export function BrollLibraryHeroSearch({
   onQueryChange,
   searchKind,
   onSearchKindChange,
-  filters,
-  onFiltersApply,
-  activeFilterCount,
   // resultsMeta,
   headerAnchorRef,
+  themeMode,
 }: BrollLibrarySearchShellProps) {
   const heroAnchorRef = useRef<HTMLDivElement>(null);
   const { progress, floatingStyle } = useMorphSearchPosition(heroAnchorRef, headerAnchorRef);
@@ -234,19 +213,19 @@ export function BrollLibraryHeroSearch({
   return (
     <>
       <h1
-        className="mb-5 text-center font-semibold tracking-tight text-white transition-opacity duration-150 sm:mb-6"
+        className="mb-3 text-center font-bold tracking-tight text-white transition-opacity duration-150 sm:mb-4"
         style={{ opacity: headingOpacity }}
       >
-        <span className="block text-3xl sm:text-4xl md:text-[2.75rem] md:leading-tight">
-          Find the perfect clip
+        <span className="block text-3xl sm:text-4xl md:text-[2.85rem] md:leading-tight">
+          Find The Perfect Clip
         </span>
-        <span className="mt-1 block bg-gradient-to-r from-[oklch(82%_0.13_332)] via-[oklch(70%_0.22_332)] to-[oklch(82%_0.13_332)] bg-clip-text text-3xl text-transparent sm:text-4xl md:text-[2.75rem] md:leading-tight">
-          for your next masterpiece
+        <span className="block text-3xl sm:text-4xl md:text-[2.85rem] md:leading-tight">
+          For Your Next Masterpiece
         </span>
       </h1>
 
       <p
-        className="mx-auto mb-7 max-w-xl text-center text-sm text-white/65 transition-opacity duration-150 sm:mb-9 sm:text-base"
+        className="mx-auto mb-7 max-w-4xl text-center text-sm font-medium text-white/90 transition-opacity duration-150 sm:mb-8 sm:text-base"
         style={{ opacity: headingOpacity }}
       >
         Access a curated library of high-fidelity stock footage across various niches, ready for
@@ -269,12 +248,9 @@ export function BrollLibraryHeroSearch({
           onQueryChange={onQueryChange}
           searchKind={searchKind}
           onSearchKindChange={onSearchKindChange}
-          filters={filters}
-          onFiltersApply={onFiltersApply}
-          activeFilterCount={activeFilterCount}
           compact={compact}
           variant={variant}
-          dockedToNavbar={dockedToNavbar}
+          themeMode={themeMode}
         />
       </div>
     </>
@@ -289,7 +265,7 @@ export function BrollLibraryHeaderSearchAnchor({
   return (
     <div
       ref={anchorRef}
-      className="mx-auto h-10 w-full min-w-0 max-w-xl flex-1 px-2"
+      className="mx-auto h-10 w-full min-w-0 max-w-3xl flex-1 px-2"
       aria-hidden
     />
   );

@@ -262,8 +262,8 @@
     transition: opacity 0.2s ease;
     background: radial-gradient(
       var(--spot-size) circle at var(--spot-x) var(--spot-y),
-      oklch(54.179% 0.22292 332.367 / 0.42),
-      oklch(54.179% 0.22292 332.367 / 0.12) 30%,
+      rgb(239 51 64 / 0.18),
+      rgb(239 51 64 / 0.06) 30%,
       transparent 55%
     );
     pointer-events: none;
@@ -279,8 +279,8 @@
     transition: opacity 0.2s ease;
     background: radial-gradient(
       calc(var(--spot-size) * 0.83) circle at var(--spot-x) var(--spot-y),
-      oklch(72% 0.18 332 / 0.9),
-      oklch(54.179% 0.22292 332.367 / 0.35) 24%,
+      rgb(239 51 64 / 0.55),
+      rgb(239 51 64 / 0.22) 24%,
       transparent 52%
     );
     padding: 1px;
@@ -321,8 +321,8 @@
     transition: opacity 0.18s ease;
     background: radial-gradient(
       var(--spot-size) circle at var(--spot-x) var(--spot-y),
-      oklch(54.179% 0.22292 332.367 / 0.28),
-      oklch(54.179% 0.22292 332.367 / 0.08) 32%,
+      rgb(239 51 64 / 0.16),
+      rgb(239 51 64 / 0.06) 32%,
       transparent 52%
     );
     pointer-events: none;
@@ -338,8 +338,8 @@
     transition: opacity 0.18s ease;
     background: radial-gradient(
       calc(var(--spot-size) * 0.7) circle at var(--spot-x) var(--spot-y),
-      oklch(72% 0.18 332 / 0.85),
-      oklch(54.179% 0.22292 332.367 / 0.4) 26%,
+      rgb(239 51 64 / 0.55),
+      rgb(239 51 64 / 0.2) 26%,
       transparent 48%
     );
     padding: 1px;
@@ -356,10 +356,39 @@
 
   .broll-card-spotlight.is-spotlight-active {
     --spot-opacity: 1;
-    border-color: oklch(54.179% 0.22292 332.367 / 0.35);
+    border-color: rgb(239 51 64 / 0.4);
     box-shadow:
-      var(--glow-sx) var(--glow-sy) 18px -6px oklch(54.179% 0.22292 332.367 / 0.45),
-      var(--glow-sx) var(--glow-sy) 34px -12px oklch(54.179% 0.22292 332.367 / 0.18);
+      var(--glow-sx) var(--glow-sy) 18px -6px rgb(239 51 64 / 0.24),
+      var(--glow-sx) var(--glow-sy) 34px -12px rgb(239 51 64 / 0.12);
+  }
+
+  .bi.bi-play-btn {
+    position: relative;
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    color: currentColor;
+    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.85)) drop-shadow(0 0 4px rgb(0 0 0 / 0.45));
+  }
+
+  .bi.bi-play-btn::before {
+    content: '';
+    position: absolute;
+    inset: 4px 2px;
+    border: 2.4px solid currentColor;
+    border-radius: 3.5px;
+  }
+
+  .bi.bi-play-btn::after {
+    content: '';
+    position: absolute;
+    left: 11px;
+    top: 9px;
+    width: 0;
+    height: 0;
+    border-bottom: 5px solid transparent;
+    border-left: 7px solid currentColor;
+    border-top: 5px solid transparent;
   }
 
   /* Text shadows for better readability on dark */

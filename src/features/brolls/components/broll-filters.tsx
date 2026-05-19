@@ -1,9 +1,8 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ChevronDown, Filter, Search } from 'lucide-react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Slider } from '@/components/ui/slider';
 import { cn } from '@/shared/ui/cn';
 import {
   BROLL_NATIONALITY_OPTIONS,
@@ -11,9 +10,8 @@ import {
   type BrollFilterValues,
 } from '@/features/brolls/components/broll-filter-model';
 
-function onlyDigits(value: string): string {
-  return value.replace(/\D/g, '');
-}
+const AGE_MIN = 0;
+const AGE_MAX = 100;
 
 function sameFilters(a: BrollFilterValues, b: BrollFilterValues): boolean {
   return (
@@ -26,82 +24,26 @@ function sameFilters(a: BrollFilterValues, b: BrollFilterValues): boolean {
   );
 }
 
-function canScrollElement(element: HTMLElement, deltaY: number): boolean {
-  if (element.scrollHeight <= element.clientHeight) return false;
-  if (deltaY < 0) return element.scrollTop > 0;
-  if (deltaY > 0) {
-    return element.scrollTop + element.clientHeight < element.scrollHeight - 1;
-  }
-  return false;
-}
-
-type BrollFiltersProps = {
+type BrollFiltersPanelProps = {
   value: BrollFilterValues;
   onApply: (value: BrollFilterValues) => void;
   activeCount: number;
-  compact: boolean;
-  isHero: boolean;
-  barHeight: string;
-  /** When true (search bar docked in navbar), the popover closes. */
-  dockedToNavbar?: boolean;
+  themeMode: 'light' | 'dark';
 };
 
-export function BrollFilters({
+export function BrollFiltersPanel({
   value,
   onApply,
   activeCount,
-  compact,
-  isHero,
-  barHeight,
-  dockedToNavbar = false,
-}: BrollFiltersProps) {
-  const [open, setOpen] = useState(false);
+  themeMode,
+}: BrollFiltersPanelProps) {
+  const isDark = themeMode === 'dark';
   const [draft, setDraft] = useState<BrollFilterValues>(value);
-  const [nationalityOpen, setNationalityOpen] = useState(false);
   const [nationalitySearch, setNationalitySearch] = useState('');
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const scrollBodyRef = useRef<HTMLDivElement | null>(null);
-  const [panelMaxHeight, setPanelMaxHeight] = useState(520);
-  const [panelSide, setPanelSide] = useState<'top' | 'bottom'>('bottom');
 
   useEffect(() => {
-    if (!open) {
-      setDraft(value);
-      setNationalityOpen(false);
-      setNationalitySearch('');
-    }
-  }, [open, value]);
-
-  useEffect(() => {
-    if (dockedToNavbar) setOpen(false);
-  }, [dockedToNavbar]);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-
-    const updatePanelHeight = () => {
-      const trigger = triggerRef.current;
-      if (!trigger) return;
-
-      const bottomSafety = 96;
-      const topSafety = 88;
-      const sideOffset = 8;
-      const rect = trigger.getBoundingClientRect();
-      const availableBelow = window.innerHeight - rect.bottom - bottomSafety - sideOffset;
-      const availableAbove = rect.top - topSafety - sideOffset;
-      const nextSide = availableBelow < 280 && availableAbove > availableBelow ? 'top' : 'bottom';
-      const availableSpace = nextSide === 'top' ? availableAbove : availableBelow;
-
-      setPanelSide(nextSide);
-      setPanelMaxHeight(Math.max(160, Math.min(520, availableSpace)));
-    };
-
-    updatePanelHeight();
-    window.addEventListener('resize', updatePanelHeight);
-    return () => {
-      window.removeEventListener('resize', updatePanelHeight);
-    };
-  }, [open]);
+    setDraft(value);
+  }, [value]);
 
   const filteredNationalities = useMemo(() => {
     const query = nationalitySearch.trim().toLowerCase();
@@ -114,6 +56,17 @@ export function BrollFilters({
   const minAge = draft.minAge ? Number(draft.minAge) : null;
   const maxAge = draft.maxAge ? Number(draft.maxAge) : null;
   const ageError = minAge !== null && maxAge !== null && minAge > maxAge;
+  const ageRange: [number, number] = [
+    minAge ?? AGE_MIN,
+    maxAge ?? AGE_MAX,
+  ];
+
+  const selectedNationalities = useMemo(() => {
+    const labels = new Map(BROLL_NATIONALITY_OPTIONS.map((option) => [option.value, option]));
+    return draft.nationalities
+      .map((value) => labels.get(value))
+      .filter((option): option is (typeof BROLL_NATIONALITY_OPTIONS)[number] => Boolean(option));
+  }, [draft.nationalities]);
 
   const setSingleFilter = <K extends 'gender' | 'skin'>(
     key: K,
@@ -137,6 +90,22 @@ export function BrollFilters({
     });
   };
 
+  const removeNationality = (selectedValue: string) => {
+    setDraft((current) => ({
+      ...current,
+      nationalities: current.nationalities.filter((value) => value !== selectedValue),
+    }));
+  };
+
+  const setAgeRange = (nextRange: number[]) => {
+    const [nextMin = AGE_MIN, nextMax = AGE_MAX] = nextRange;
+    setDraft((current) => ({
+      ...current,
+      minAge: nextMin <= AGE_MIN ? '' : String(nextMin),
+      maxAge: nextMax >= AGE_MAX ? '' : String(nextMax),
+    }));
+  };
+
   const handleReset = () => {
     setDraft(EMPTY_BROLL_FILTERS);
     setNationalitySearch('');
@@ -146,262 +115,225 @@ export function BrollFilters({
   const handleApply = () => {
     if (ageError) return;
     onApply(draft);
-    setOpen(false);
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          ref={triggerRef}
-          type="button"
-          size="sm"
-          className={cn(
-            barHeight,
-            'shrink-0 rounded-none border-0 border-l px-2 sm:px-3',
-            isHero
-              ? 'border-white/10 bg-white/10 text-white hover:bg-white/15'
-              : 'border-border text-foreground hover:bg-muted',
-          )}
-          aria-label={activeCount ? `Filters, ${activeCount} active` : 'Filters'}
-          aria-expanded={open}
-        >
-          <Filter className={cn('h-4 w-4', compact && 'hidden sm:block')} />
-          <span>{activeCount ? `Filters (${activeCount})` : 'Filters'}</span>
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        avoidCollisions={false}
-        side={panelSide}
-        sideOffset={8}
-        onWheelCapture={(event) => {
-          const scrollBody = scrollBodyRef.current;
-          if (!scrollBody) return;
-
-          const target = event.target instanceof HTMLElement ? event.target : null;
-          const nestedScroller = target?.closest('[data-broll-nested-scroll="true"]');
-          if (nestedScroller instanceof HTMLElement) {
-            event.stopPropagation();
-            if (!canScrollElement(nestedScroller, event.deltaY)) event.preventDefault();
-            return;
-          }
-
-          event.stopPropagation();
-
-          if (scrollBody.contains(target)) {
-            if (!canScrollElement(scrollBody, event.deltaY)) event.preventDefault();
-            return;
-          }
-
-          if (canScrollElement(scrollBody, event.deltaY)) {
-            scrollBody.scrollBy({ top: event.deltaY, behavior: 'auto' });
-            return;
-          }
-
-          event.preventDefault();
-        }}
-        className="z-[70] flex max-h-[min(520px,calc(100vh-9rem))] w-[calc(100vw-2rem)] max-w-md flex-col overflow-hidden overscroll-contain rounded-lg border-border bg-card p-0 text-card-foreground shadow-xl"
-        style={{ maxHeight: panelMaxHeight }}
-      >
-        <div className="shrink-0 border-b border-border px-4 py-3">
-          <div className="text-sm font-semibold">Filters</div>
+    <aside
+      className={cn(
+        'h-fit rounded-lg border p-4 lg:sticky lg:top-24',
+        isDark ? 'border-white/10 bg-[#101010] text-white' : 'border-[#e3e3e3] bg-white text-[#111]',
+      )}
+      aria-label="B-roll filters"
+    >
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <div className="text-base font-semibold">Filters</div>
           {activeCount > 0 ? (
-            <div className="mt-1 text-xs text-muted-foreground">{activeCount} active</div>
+            <div className={cn('mt-0.5 text-xs', isDark ? 'text-white/55' : 'text-[#666]')}>
+              {activeCount} active
+            </div>
           ) : null}
         </div>
-
-        <div
-          ref={scrollBodyRef}
-          data-broll-scroll-body="true"
-          className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4"
-        >
-          <FilterSection title="Gender">
-            <SegmentedOptions
-              value={draft.gender}
-              options={[
-                { value: 'male', label: 'Male' },
-                { value: 'female', label: 'Female' },
-              ]}
-              onSelect={(selectedValue) => setSingleFilter('gender', selectedValue)}
-            />
-          </FilterSection>
-
-          <FilterSection title="Skin">
-            <SegmentedOptions
-              value={draft.skin}
-              options={[
-                { value: 'black', label: 'Black' },
-                { value: 'white', label: 'White' },
-              ]}
-              onSelect={(selectedValue) => setSingleFilter('skin', selectedValue)}
-            />
-          </FilterSection>
-
-          <FilterSection title="Age">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="broll-filter-min-age" className="text-xs text-muted-foreground">
-                  Min age
-                </Label>
-                <Input
-                  id="broll-filter-min-age"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={draft.minAge}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, minAge: onlyDigits(event.target.value) }))
-                  }
-                  placeholder="Any"
-                  aria-invalid={ageError}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="broll-filter-max-age" className="text-xs text-muted-foreground">
-                  Max age
-                </Label>
-                <Input
-                  id="broll-filter-max-age"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={draft.maxAge}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, maxAge: onlyDigits(event.target.value) }))
-                  }
-                  placeholder="Any"
-                  aria-invalid={ageError}
-                />
-              </div>
-            </div>
-            {ageError ? (
-              <div className="text-xs font-medium text-destructive">
-                Min age cannot be greater than max age.
-              </div>
-            ) : null}
-          </FilterSection>
-
-          <CollapsibleFilterSection
-            title="Nationality"
-            open={nationalityOpen}
-            onOpenChange={setNationalityOpen}
-            hint={
-              draft.nationalities.length
-                ? `${draft.nationalities.length} selected`
-                : undefined
-            }
+        {activeCount > 0 ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleReset}
+            className={cn(
+              'h-8 px-2 text-xs',
+              isDark ? 'text-white/70 hover:bg-white/10 hover:text-white' : 'text-[#555] hover:bg-[#f4f4f4] hover:text-[#111]',
+            )}
           >
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={nationalitySearch}
-                onChange={(event) => setNationalitySearch(event.target.value)}
-                placeholder="Search countries..."
-                aria-label="Search nationalities"
-                className="h-9 pl-9"
-              />
-            </div>
-            <div
-              data-broll-nested-scroll="true"
-              className="max-h-52 overflow-y-auto overscroll-contain rounded-md border border-border bg-background/40 p-1"
-            >
-              {filteredNationalities.length ? (
-                filteredNationalities.map((option) => {
-                  const checked = draft.nationalities.includes(option.value);
-                  return (
-                    <label
-                      key={option.value}
-                      className={cn(
-                        'flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm transition-colors hover:bg-muted',
-                        checked && 'bg-primary/10 text-primary hover:bg-primary/15',
-                      )}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleNationality(option.value)}
-                        className="h-4 w-4 rounded border-border accent-primary"
-                      />
-                      <span className="text-base leading-none" aria-hidden>
-                        {option.flag}
-                      </span>
-                      <span>{option.label}</span>
-                    </label>
-                  );
-                })
-              ) : (
-                <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-                  No countries found.
-                </div>
-              )}
-            </div>
-          </CollapsibleFilterSection>
-        </div>
+            Reset
+          </Button>
+        ) : null}
+      </div>
 
-        <div className="shrink-0 border-t border-border bg-card p-4">
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button type="button" variant="outline" onClick={handleReset}>
-              Reset all
-            </Button>
-            <Button
-              type="button"
-              onClick={handleApply}
-              disabled={ageError || sameFilters(value, draft)}
-            >
-              Apply
-            </Button>
+      <div className="space-y-5">
+        <FilterSection title="Gender" isDark={isDark}>
+          <RadioOptions
+            value={draft.gender}
+            options={[
+              { value: 'male', label: 'Male' },
+              { value: 'female', label: 'Female' },
+            ]}
+            onSelect={(selectedValue) => setSingleFilter('gender', selectedValue)}
+            isDark={isDark}
+          />
+        </FilterSection>
+
+        <FilterSection title="Skin" isDark={isDark}>
+          <SegmentedOptions
+            value={draft.skin}
+            options={[
+              { value: 'black', label: 'Black' },
+              { value: 'white', label: 'White' },
+            ]}
+            onSelect={(selectedValue) => setSingleFilter('skin', selectedValue)}
+            isDark={isDark}
+          />
+        </FilterSection>
+
+        <FilterSection title="Age" isDark={isDark}>
+          <div
+            className={cn(
+              'rounded-md border px-3 py-3',
+              isDark ? 'border-white/10 bg-[#080808]' : 'border-[#e3e3e3] bg-[#fafafa]',
+            )}
+          >
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <span className={cn('text-sm font-medium', isDark ? 'text-white' : 'text-[#111]')}>
+                {draft.minAge || draft.maxAge
+                  ? `${ageRange[0]} - ${ageRange[1]} years`
+                  : 'Any age'}
+              </span>
+              <span className={cn('text-xs', isDark ? 'text-white/45' : 'text-[#777]')}>
+                {AGE_MIN}-{AGE_MAX}
+              </span>
+            </div>
+            <Slider
+              value={ageRange}
+              min={AGE_MIN}
+              max={AGE_MAX}
+              step={1}
+              minStepsBetweenThumbs={1}
+              onValueChange={setAgeRange}
+              aria-label="Age range"
+              className="py-2"
+            />
           </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+          {ageError ? (
+            <div className="text-xs font-medium text-destructive">
+              Min age cannot be greater than max age.
+            </div>
+          ) : null}
+        </FilterSection>
+
+        <FilterSection title="Tags" isDark={isDark}>
+          <div
+            className={cn(
+              'min-h-10 rounded-md border p-2',
+              isDark ? 'border-white/10 bg-[#080808]' : 'border-[#e3e3e3] bg-[#fafafa]',
+            )}
+          >
+            {selectedNationalities.length ? (
+              <div className="flex flex-wrap gap-2">
+                {selectedNationalities.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => removeNationality(option.value)}
+                    className={cn(
+                      'inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+                      isDark
+                        ? 'border-[#ef3340]/35 bg-[#ef3340]/15 text-white hover:bg-[#ef3340]/25'
+                        : 'border-[#ffd0d5] bg-[#fff1f2] text-[#bd1f2d] hover:bg-[#ffe5e8]',
+                    )}
+                  >
+                    <span className="truncate">{option.label}</span>
+                    <X className="h-3 w-3 shrink-0" />
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className={cn('px-1 py-1 text-xs', isDark ? 'text-white/45' : 'text-[#777]')}>
+                Selected nationalities appear here.
+              </div>
+            )}
+          </div>
+        </FilterSection>
+
+        <FilterSection title="Nationality" isDark={isDark}>
+          <div className="relative">
+            <Search
+              className={cn(
+                'pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2',
+                isDark ? 'text-white/45' : 'text-[#707070]',
+              )}
+            />
+            <Input
+              value={nationalitySearch}
+              onChange={(event) => setNationalitySearch(event.target.value)}
+              placeholder="Search countries..."
+              aria-label="Search nationalities"
+              className={cn(
+                'h-9 pl-9',
+                isDark
+                  ? 'border-white/15 bg-[#080808] text-white placeholder:text-white/35'
+                  : 'border-[#d6d6d6] bg-white text-[#111] placeholder:text-[#777]',
+              )}
+            />
+          </div>
+          <div
+            className={cn(
+              'h-64 overflow-y-auto rounded-md border p-1',
+              isDark ? 'border-white/15 bg-[#080808]' : 'border-[#d6d6d6] bg-white',
+            )}
+          >
+            {filteredNationalities.length ? (
+              filteredNationalities.map((option) => {
+                const checked = draft.nationalities.includes(option.value);
+                return (
+                  <label
+                    key={option.value}
+                    className={cn(
+                      'flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm transition-colors',
+                      isDark ? 'hover:bg-white/10' : 'hover:bg-[#f4f4f4]',
+                      checked &&
+                        (isDark
+                          ? 'bg-[#ef3340]/15 text-white hover:bg-[#ef3340]/25'
+                          : 'bg-[#fff1f2] text-[#d92734] hover:bg-[#ffe5e8]'),
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleNationality(option.value)}
+                      className="h-4 w-4 rounded border-[#d6d6d6] accent-[#ef3340]"
+                    />
+                    <span className="text-base leading-none" aria-hidden>
+                      {option.flag}
+                    </span>
+                    <span>{option.label}</span>
+                  </label>
+                );
+              })
+            ) : (
+              <div className={cn('px-2 py-6 text-center text-sm', isDark ? 'text-white/55' : 'text-[#666]')}>
+                No countries found.
+              </div>
+            )}
+          </div>
+        </FilterSection>
+      </div>
+
+      <div className={cn('mt-5 border-t pt-4', isDark ? 'border-white/10' : 'border-[#e3e3e3]')}>
+        <Button
+          type="button"
+          onClick={handleApply}
+          disabled={ageError || sameFilters(value, draft)}
+          className="w-full bg-[#ef3340] text-white hover:bg-[#d92734]"
+        >
+          Apply filters
+        </Button>
+      </div>
+    </aside>
   );
 }
 
-function CollapsibleFilterSection({
+function FilterSection({
   title,
-  open,
-  onOpenChange,
-  hint,
+  isDark,
   children,
 }: {
   title: string;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  hint?: string;
+  isDark: boolean;
   children: ReactNode;
 }) {
   return (
     <section className="space-y-2.5">
-      <button
-        type="button"
-        onClick={() => onOpenChange(!open)}
-        className="flex w-full items-center justify-between gap-2 rounded-md text-left transition-colors hover:bg-muted/40"
-        aria-expanded={open}
-      >
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {title}
-        </span>
-        <span className="flex items-center gap-2">
-          {hint ? (
-            <span className="text-xs font-medium normal-case text-primary">{hint}</span>
-          ) : null}
-          <ChevronDown
-            className={cn(
-              'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
-              open && 'rotate-180',
-            )}
-          />
-        </span>
-      </button>
-      {open ? <div className="space-y-2.5">{children}</div> : null}
-    </section>
-  );
-}
-
-
-function FilterSection({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="space-y-2.5">
-      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <div className={cn('text-xs font-semibold uppercase tracking-wide', isDark ? 'text-white/55' : 'text-[#666]')}>
         {title}
       </div>
       {children}
@@ -409,14 +341,69 @@ function FilterSection({ title, children }: { title: string; children: ReactNode
   );
 }
 
-function SegmentedOptions<T extends string>({
+function RadioOptions<T extends string>({
   value,
   options,
   onSelect,
+  isDark,
 }: {
   value: T | '';
   options: Array<{ value: T; label: string }>;
   onSelect: (value: T) => void;
+  isDark: boolean;
+}) {
+  return (
+    <div className="space-y-1.5" role="radiogroup">
+      {options.map((option) => {
+        const selected = value === option.value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onSelect(option.value)}
+            className={cn(
+              'flex h-9 w-full items-center gap-3 rounded-md px-2.5 text-left text-sm font-medium transition-all duration-200',
+              isDark ? 'text-white hover:bg-white/10' : 'text-[#111] hover:bg-[#f4f4f4]',
+            )}
+            role="radio"
+            aria-checked={selected}
+          >
+            <span
+              className={cn(
+                'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors duration-200',
+                selected
+                  ? 'border-[#ef3340]'
+                  : isDark
+                    ? 'border-white/30'
+                    : 'border-[#b8b8b8]',
+              )}
+              aria-hidden="true"
+            >
+              <span
+                className={cn(
+                  'h-2 w-2 rounded-full bg-[#ef3340] transition-transform duration-200',
+                  selected ? 'scale-100' : 'scale-0',
+                )}
+              />
+            </span>
+            <span>{option.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function SegmentedOptions<T extends string>({
+  value,
+  options,
+  onSelect,
+  isDark,
+}: {
+  value: T | '';
+  options: Array<{ value: T; label: string }>;
+  onSelect: (value: T) => void;
+  isDark: boolean;
 }) {
   return (
     <div className="grid grid-cols-2 gap-2">
@@ -428,8 +415,14 @@ function SegmentedOptions<T extends string>({
             type="button"
             onClick={() => onSelect(option.value)}
             className={cn(
-              'h-9 rounded-md border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground',
-              selected && 'border-primary bg-primary/10 text-primary hover:bg-primary/15',
+              'h-9 rounded-md border px-3 text-sm font-medium transition-colors',
+              isDark
+                ? 'border-white/15 bg-[#080808] text-white hover:bg-white/10'
+                : 'border-[#d6d6d6] bg-white text-[#111] hover:bg-[#f4f4f4]',
+              selected &&
+                (isDark
+                  ? 'border-[#ef3340] bg-[#ef3340]/15 text-white hover:bg-[#ef3340]/25'
+                  : 'border-[#ef3340] bg-[#fff1f2] text-[#d92734] hover:bg-[#ffe5e8]'),
             )}
             aria-pressed={selected}
           >

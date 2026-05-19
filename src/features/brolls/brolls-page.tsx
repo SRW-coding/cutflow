@@ -7,7 +7,9 @@ import {
   LayoutDashboard,
   Loader2,
   LogOut,
+  Moon,
   Play,
+  Sun,
   User,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -17,6 +19,7 @@ import {
   BrollLibraryHeaderSearchAnchor,
   BrollLibraryHeroSearch,
 } from '@/features/brolls/components/broll-library-search';
+import { BrollFiltersPanel } from '@/features/brolls/components/broll-filters';
 import {
   BROLL_NATIONALITY_OPTIONS,
   EMPTY_BROLL_FILTERS,
@@ -47,8 +50,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useAuthStore } from '@/stores/auth-store';
 import { authApi } from '@/infrastructure/api/auth';
+
+const HERO_BACKGROUND_VIDEOS = [
+  '/assets/hero/0109-53-3banec400z_1080__D.mp4',
+  '/assets/hero/66b22d2406b4320c51ed519e-lpt-sbpbxg_1080__D.mp4',
+  '/assets/hero/hero.mp4',
+  '/assets/hero/sunny-view-of-miami-beach-florida-usa-on-hot-day-2025-08-29-02-31-26-utc-r6hjf3xm43_1080__D.mp4',
+] as const;
 
 type BrollItemWithMeta = BrollLibraryItem & {
   __categoryId: number;
@@ -160,7 +171,68 @@ function matchesBrollFilters(item: BrollItemWithMeta, filters: BrollFilterValues
   return true;
 }
 
+function HeroVideoBackground() {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveIndex((index) => (index + 1) % HERO_BACKGROUND_VIDEOS.length);
+    }, 7000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const advance = useCallback(() => {
+    setActiveIndex((index) => (index + 1) % HERO_BACKGROUND_VIDEOS.length);
+  }, []);
+
+  return (
+    <video
+      key={HERO_BACKGROUND_VIDEOS[activeIndex]}
+      className="absolute inset-0 h-full w-full object-cover opacity-75 [filter:hue-rotate(185deg)_saturate(1.25)]"
+      src={HERO_BACKGROUND_VIDEOS[activeIndex]}
+      autoPlay
+      muted
+      loop
+      playsInline
+      preload="metadata"
+      aria-hidden="true"
+      onError={advance}
+    />
+  );
+}
+
+function triggerDirectAssetDownload(item: BrollLibraryItem) {
+  const a = document.createElement('a');
+  a.href = item.url;
+  a.download = suggestedFileNameForBroll(item.name, item.url);
+  a.rel = 'noreferrer';
+  a.target = '_blank';
+  document.body.appendChild(a);
+  try {
+    a.click();
+  } finally {
+    a.remove();
+  }
+}
+
 export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(() => {
+    try {
+      return localStorage.getItem('brolls_theme') === 'dark' ? 'dark' : 'light';
+    } catch {
+      return 'light';
+    }
+  });
+  const isDarkTheme = themeMode === 'dark';
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('brolls_theme', themeMode);
+    } catch {
+      // Ignore storage errors (private mode, quota exceeded)
+    }
+  }, [themeMode]);
+
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
   const tokens = useAuthStore((s) => s.tokens);
@@ -369,7 +441,23 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
         // Ignore AbortError — user navigated away
         if (e instanceof DOMException && e.name === 'AbortError') return;
         const msg = e instanceof Error ? e.message : 'Download failed.';
-        if (mountedRef.current) toast.error('Download failed', { description: msg });
+        triggerDirectAssetDownload(item);
+        if (!isAuthenticated) {
+          const next = guestDownloads + 1;
+          try {
+            localStorage.setItem('brolls_guest_downloads', String(next));
+          } catch {
+            // Ignore storage errors (private mode, quota exceeded)
+          }
+          if (mountedRef.current) setGuestDownloads(next);
+        }
+        if (mountedRef.current) {
+          toast.info('Opening download', {
+            description: msg.includes('Failed to fetch')
+              ? 'The video server blocks in-page downloads, so the file is opening directly.'
+              : 'The file is opening directly because the in-page download could not finish.',
+          });
+        }
       } finally {
         // FIX 3: Belt-and-suspenders: revoke if we somehow exited without revoking
         if (url) {
@@ -394,9 +482,9 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   const headerSearchAnchorRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={isDarkTheme ? 'min-h-screen bg-[#080808] text-white' : 'min-h-screen bg-white text-[#1f1f1f]'}>
       {/* ── Header ── */}
-      <header className="navbar-frosted sticky top-0 z-50 border-b border-border/50">
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0f0f0f] text-white">
         <div className="mx-auto flex max-w-[1400px] items-center gap-2 px-2 py-3 sm:gap-4 sm:px-4 sm:py-4 lg:px-6">
           <div className="flex items-center gap-4 min-w-0">
             <Link to="/" className="shrink-0">
@@ -407,7 +495,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
               />
             </Link>
             <div className="min-w-0">
-              <div className="text-sm font-bold text-foreground truncate">
+              <div className="text-sm font-bold text-white truncate">
                 Cutflow Video Library
               </div>
               {/* <div className="text-xs text-muted-foreground truncate">
@@ -419,26 +507,43 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
           <BrollLibraryHeaderSearchAnchor anchorRef={headerSearchAnchorRef} />
 
           <div className="flex shrink-0 items-center gap-2">
+            <div
+              className="flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-2 py-1.5 text-white sm:px-3"
+              title={`Switch to ${isDarkTheme ? 'light' : 'dark'} mode`}
+            >
+              <Sun className="hidden h-3.5 w-3.5 text-white/70 sm:block" />
+              <Switch
+                checked={isDarkTheme}
+                onCheckedChange={(checked) => setThemeMode(checked ? 'dark' : 'light')}
+                aria-label="Toggle dark mode"
+                className="h-4 w-8 data-[state=checked]:bg-[#ef3340] data-[state=unchecked]:bg-white/25"
+              />
+              <Moon className="hidden h-3.5 w-3.5 text-white/70 sm:block" />
+            </div>
             {isAuthenticated ? (
               <>
                 <Link to="/dashboard">
-                  <Button variant="outline" size="sm">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-white/20 bg-transparent text-white hover:bg-white hover:text-[#111]"
+                  >
                     <LayoutDashboard className="mr-2 h-4 w-4" />
                     Dashboard
                   </Button>
                 </Link>
-                <div className="ml-1 flex items-center gap-2 border-l border-border pl-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                <div className="ml-1 flex items-center gap-2 border-l border-white/15 pl-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-sm font-semibold text-[#111]">
                     {user?.firstName?.[0]?.toUpperCase() ??
                       user?.email?.[0]?.toUpperCase() ?? <User className="h-4 w-4" />}
                   </div>
-                  <span className="hidden max-w-[120px] truncate text-sm font-medium sm:block">
+                  <span className="hidden max-w-[120px] truncate text-sm font-medium text-white sm:block">
                     {user?.firstName ?? user?.email?.split('@')[0]}
                   </span>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    className="h-8 w-8 text-white/70 hover:bg-white/10 hover:text-white"
                     onClick={handleLogout}
                     title="Sign out"
                   >
@@ -449,12 +554,18 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
             ) : (
               <>
                 <Link to="/login" search={{ redirect: '/brolls' }}>
-                  <Button variant="outline" size="sm">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-white/20 bg-transparent text-white hover:bg-white hover:text-[#111]"
+                  >
                     Log In
                   </Button>
                 </Link>
                 <Link to="/signup" search={{ redirect: '/brolls' }}>
-                  <Button size="sm">Sign Up Free</Button>
+                  <Button size="sm" className="bg-white text-[#111] hover:bg-white/90">
+                    Sign Up Free
+                  </Button>
                 </Link>
               </>
             )}
@@ -463,18 +574,18 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
       </header>
 
       {/* ── Hero ── */}
-      <div className="hero-velvet relative overflow-hidden border-b border-white/5">
-        <div className="relative mx-auto flex min-h-[560px] max-w-[1400px] flex-col items-center justify-center px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-          <div className="w-full max-w-3xl">
+      <div className="relative overflow-hidden border-b border-[#e6e6e6] bg-[#111]">
+        <HeroVideoBackground />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/20 to-black/45" />
+        <div className="relative mx-auto flex min-h-[520px] max-w-[1400px] flex-col items-center justify-center px-4 pb-16 pt-24 sm:min-h-[560px] sm:px-6 sm:pb-20 sm:pt-28 lg:min-h-[600px] lg:px-8">
+          <div className="w-full max-w-5xl">
             <BrollLibraryHeroSearch
               query={query}
               onQueryChange={setQuery}
               searchKind={searchKind}
               onSearchKindChange={setSearchKind}
-              filters={appliedFilters}
-              onFiltersApply={setAppliedFilters}
-              activeFilterCount={activeFilterCount}
               headerAnchorRef={headerSearchAnchorRef}
+              themeMode={themeMode}
               resultsMeta={
                 <>
                   <span className="text-xs text-white/80">
@@ -502,7 +613,12 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
       </div>
 
       {/* ── Main grid ── */}
-      <main className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
+      <main
+        className={[
+          'mx-auto max-w-[1680px] px-4 py-8 sm:px-6 lg:px-8',
+          isDarkTheme ? 'bg-[#080808]' : 'bg-white',
+        ].join(' ')}
+      >
         {error && (
           <div className="max-w-3xl mx-auto mb-8">
             <Alert variant="destructive">
@@ -513,12 +629,23 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
         )}
 
         {isLoading ? (
-          <BrollGridSkeleton />
+          <BrollGridSkeleton themeMode={themeMode} />
         ) : filtered.length === 0 ? (
-          <div className="max-w-3xl mx-auto">
-            <div className="rounded-xl border border-border bg-card p-10 text-center">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+            <BrollFiltersPanel
+              value={appliedFilters}
+              onApply={setAppliedFilters}
+              activeCount={activeFilterCount}
+              themeMode={themeMode}
+            />
+            <div
+              className={[
+                'rounded-lg border p-10 text-center shadow-sm',
+                isDarkTheme ? 'border-white/10 bg-[#101010]' : 'border-[#dddddd] bg-white',
+              ].join(' ')}
+            >
               <div className="text-lg font-semibold">No matches</div>
-              <div className="mt-2 text-sm text-muted-foreground">
+              <div className={isDarkTheme ? 'mt-2 text-sm text-white/60' : 'mt-2 text-sm text-[#666]'}>
                 Try a different search term or filter.
               </div>
             </div>
@@ -527,24 +654,39 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
           <div className="space-y-6">
             <div className="flex flex-wrap items-end justify-between gap-3 pb-1">
               <div>
-                <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                <h2
+                  className={[
+                    'text-2xl font-semibold tracking-tight sm:text-3xl',
+                    isDarkTheme ? 'text-white' : 'text-[#111]',
+                  ].join(' ')}
+                >
                   Recently Added
                 </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className={isDarkTheme ? 'mt-1 text-sm text-white/60' : 'mt-1 text-sm text-[#666]'}>
                   {filtered.length.toLocaleString()} results matching your criteria
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
-              {pageItems.map((it) => (
-                <BrollCard
-                  key={it.id}
-                  item={it}
-                  downloading={downloadingKey === String(it.id)}
-                  onDownload={handleDownload}
-                />
-              ))}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+              <BrollFiltersPanel
+                value={appliedFilters}
+                onApply={setAppliedFilters}
+                activeCount={activeFilterCount}
+                themeMode={themeMode}
+              />
+
+              <div className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {pageItems.map((it) => (
+                  <BrollCard
+                    key={it.id}
+                    item={it}
+                    downloading={downloadingKey === String(it.id)}
+                    onDownload={handleDownload}
+                    themeMode={themeMode}
+                  />
+                ))}
+              </div>
             </div>
 
             {/* FIX 9: Unified pagination — removed the redundant centred "Next page"
@@ -553,15 +695,22 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
             {pageCount > 1 ? (
               <div className="flex items-center justify-end gap-2">
                 <div className="hidden items-center gap-2 sm:flex">
-                  <div className="text-xs text-muted-foreground">Per page</div>
+                  <div className={isDarkTheme ? 'text-xs text-white/60' : 'text-xs text-[#666]'}>Per page</div>
                   <Select
                     value={String(pageSize)}
                     onValueChange={(v) => setPageSize(Number(v) as 15 | 30 | 60)}
                   >
-                    <SelectTrigger className="h-9 w-[90px]">
+                    <SelectTrigger
+                      className={[
+                        'h-9 w-[90px]',
+                        isDarkTheme ? 'border-white/15 bg-[#101010] text-white' : 'border-[#d6d6d6] bg-white text-[#111]',
+                      ].join(' ')}
+                    >
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent
+                      className={isDarkTheme ? 'border-white/15 bg-[#101010] text-white' : 'border-[#d6d6d6] bg-white text-[#111]'}
+                    >
                       <SelectItem value="15">15</SelectItem>
                       <SelectItem value="30">30</SelectItem>
                       <SelectItem value="60">60</SelectItem>
@@ -574,10 +723,15 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
                   disabled={page <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   aria-label="Previous page"
+                  className={
+                    isDarkTheme
+                      ? 'border-white/15 bg-[#101010] text-white hover:bg-white/10'
+                      : 'border-[#d6d6d6] bg-white text-[#111] hover:bg-[#f2f2f2]'
+                  }
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <div className="hidden px-1 text-xs text-muted-foreground sm:block">
+                <div className={isDarkTheme ? 'hidden px-1 text-xs text-white/60 sm:block' : 'hidden px-1 text-xs text-[#666] sm:block'}>
                   Page {page} of {pageCount}
                 </div>
                 <Button
@@ -586,6 +740,11 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
                   disabled={page >= pageCount}
                   onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
                   aria-label="Next page"
+                  className={
+                    isDarkTheme
+                      ? 'border-white/15 bg-[#101010] text-white hover:bg-white/10'
+                      : 'border-[#d6d6d6] bg-white text-[#111] hover:bg-[#f2f2f2]'
+                  }
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -682,7 +841,12 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
         </DialogContent>
       </Dialog>
 
-      <footer className="border-t border-border px-6 py-8" />
+      <footer
+        className={[
+          'border-t px-6 py-8',
+          isDarkTheme ? 'border-white/10 bg-[#080808]' : 'border-[#e6e6e6] bg-white',
+        ].join(' ')}
+      />
     </div>
   );
 }
@@ -698,11 +862,14 @@ const BrollCard = memo(function BrollCard({
   item,
   downloading,
   onDownload,
+  themeMode,
 }: {
   item: BrollItemWithMeta;
   downloading: boolean;
   onDownload: (item: BrollItemWithMeta) => void;
+  themeMode: 'light' | 'dark';
 }) {
+  const isDark = themeMode === 'dark';
   const thumb = item.thumbnail_url || (item.type === 'image' ? item.url : null);
 
   // Hover-to-preview: mount a <video> pointed at the full asset URL and let
@@ -752,13 +919,19 @@ const BrollCard = memo(function BrollCard({
         setHovered(false);
       }}
       className={[
-        'broll-card-spotlight group relative isolate overflow-hidden rounded-xl border border-border bg-card text-left shadow-sm',
+        'broll-card-spotlight group relative isolate overflow-hidden rounded-md border border-transparent text-left',
+        isDark ? 'bg-[#101010]' : 'bg-white',
         active && 'is-spotlight-active',
       ]
         .filter(Boolean)
         .join(' ')}
     >
-      <div className="relative z-[3] aspect-video w-full overflow-hidden bg-muted block">
+      <div
+        className={[
+          'relative z-[3] aspect-video w-full overflow-hidden rounded-md block',
+          isDark ? 'bg-[#181818]' : 'bg-[#ededed]',
+        ].join(' ')}
+      >
         {thumb ? (
           <img
             src={thumb}
@@ -768,7 +941,7 @@ const BrollCard = memo(function BrollCard({
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
           />
         ) : (
-          <div className="absolute inset-0 grid place-items-center text-muted-foreground">
+          <div className={isDark ? 'absolute inset-0 grid place-items-center text-white/50' : 'absolute inset-0 grid place-items-center text-[#777]'}>
             <div className="flex flex-col items-center gap-2 text-sm">
               <Play className="h-8 w-8 opacity-30" />
               <span className="text-xs opacity-50">No thumbnail</span>
@@ -777,9 +950,11 @@ const BrollCard = memo(function BrollCard({
         )}
 
         {item.type === 'video' && !hovered && (
-          <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-black/50 px-2 py-1 backdrop-blur-sm">
-            <Play className="h-3 w-3 fill-white text-white" />
-            <span className="text-[10px] font-medium text-white">Video</span>
+          <div
+            className="absolute left-2 top-2 flex h-9 w-9 items-center justify-center text-white"
+            aria-hidden="true"
+          >
+            <i className="bi bi-play-btn" />
           </div>
         )}
 
@@ -876,7 +1051,7 @@ function DownloadButton({
       disabled={downloading}
       title={`Download "${title}"`}
       className={[
-        'cursor-spotlight relative isolate inline-flex cursor-pointer items-center gap-1.5 overflow-hidden rounded-full border border-white/10 bg-black/55 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/65 disabled:cursor-not-allowed disabled:opacity-70',
+        'cursor-spotlight relative isolate inline-flex cursor-pointer items-center gap-1.5 overflow-hidden rounded-full border border-white/10 bg-[#ef3340] px-3 py-1.5 text-[11px] font-semibold text-white shadow-lg shadow-black/20 backdrop-blur-sm transition-colors hover:bg-[#d92734] disabled:cursor-not-allowed disabled:opacity-70',
         active && 'is-spotlight-active',
       ]
         .filter(Boolean)
@@ -896,20 +1071,26 @@ function DownloadButton({
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
-function BrollGridSkeleton() {
+function BrollGridSkeleton({ themeMode }: { themeMode: 'light' | 'dark' }) {
+  const isDark = themeMode === 'dark';
   const tiles = Array.from({ length: 12 });
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {tiles.map((_, idx) => (
-        <div key={idx} className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-          <div className="aspect-video w-full bg-muted relative overflow-hidden">
+        <div key={idx} className={isDark ? 'overflow-hidden rounded-md bg-[#101010]' : 'overflow-hidden rounded-md bg-white'}>
+          <div
+            className={[
+              'aspect-video w-full rounded-md relative overflow-hidden',
+              isDark ? 'bg-[#181818]' : 'bg-[#ededed]',
+            ].join(' ')}
+          >
             <div className="absolute inset-0 animate-shimmer opacity-20">
-              <div className="h-full w-1/3 bg-white/20" />
+              <div className={isDark ? 'h-full w-1/3 bg-white/20' : 'h-full w-1/3 bg-white/70'} />
             </div>
           </div>
           <div className="p-3 space-y-2">
-            <div className="h-3 w-2/3 rounded bg-muted" />
-            <div className="h-3 w-1/2 rounded bg-muted" />
+            <div className={isDark ? 'h-3 w-2/3 rounded bg-white/10' : 'h-3 w-2/3 rounded bg-[#e2e2e2]'} />
+            <div className={isDark ? 'h-3 w-1/2 rounded bg-white/10' : 'h-3 w-1/2 rounded bg-[#eeeeee]'} />
           </div>
         </div>
       ))}
