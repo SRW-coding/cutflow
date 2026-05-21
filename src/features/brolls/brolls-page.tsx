@@ -244,7 +244,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
       if (!initialFromCache) setIsLoading(true);
       setError(null);
       try {
-        const [lib] = await Promise.all([fetchBrollLibrary(), loadProjects()]);
+        const [lib] = await Promise.all([fetchBrollLibrary(appliedFilters), loadProjects()]);
         if (cancelled) return;
 
         const processed = processLibrary(lib as RawCategory[]);
@@ -270,7 +270,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
     return () => {
       cancelled = true;
     };
-  }, [loadProjects, initialFromCache]);
+  }, [loadProjects, initialFromCache, appliedFilters]);
 
   useEffect(() => {
     if (fixedProjectId) return;

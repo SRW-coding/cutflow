@@ -4,9 +4,21 @@ export type BrollNationalityOption = {
   terms: string[];
 };
 
+export type BrollEthnicity =
+  | 'white'
+  | 'black'
+  | 'asian'
+  | 'spanish'
+  | 'swedish'
+  | 'italian'
+  | 'brazilian'
+  | 'ukrainian'
+  | 'european'
+  | 'british';
+
 export type BrollFilterValues = {
   gender: 'male' | 'female' | '';
-  skin: 'black' | 'white' | '';
+  ethnicity: BrollEthnicity | '';
   minAge: string;
   maxAge: string;
   nationalities: string[];
@@ -14,7 +26,7 @@ export type BrollFilterValues = {
 
 export const EMPTY_BROLL_FILTERS: BrollFilterValues = {
   gender: '',
-  skin: '',
+  ethnicity: '',
   minAge: '',
   maxAge: '',
   nationalities: [],
@@ -25,9 +37,17 @@ export const BROLL_GENDER_OPTIONS = [
   { value: 'female' as const, label: 'Female' },
 ];
 
-export const BROLL_SKIN_OPTIONS = [
-  { value: 'black' as const, label: 'Black' },
-  { value: 'white' as const, label: 'White' },
+export const BROLL_ETHNICITY_OPTIONS: Array<{ value: BrollEthnicity; label: string }> = [
+  { value: 'white',     label: 'White' },
+  { value: 'black',     label: 'Black' },
+  { value: 'asian',     label: 'Asian' },
+  { value: 'spanish',   label: 'Spanish' },
+  { value: 'swedish',   label: 'Swedish' },
+  { value: 'italian',   label: 'Italian' },
+  { value: 'brazilian', label: 'Brazilian' },
+  { value: 'ukrainian', label: 'Ukrainian' },
+  { value: 'european',  label: 'European' },
+  { value: 'british',   label: 'British' },
 ];
 
 /** Country / region options for nationality matching against item metadata. */
@@ -96,7 +116,7 @@ export function hasActiveBrollFilters(filters: BrollFilterValues): boolean {
 export function countBrollFilters(filters: BrollFilterValues): number {
   return (
     (filters.gender ? 1 : 0) +
-    (filters.skin ? 1 : 0) +
+    (filters.ethnicity ? 1 : 0) +
     (filters.minAge || filters.maxAge ? 1 : 0) +
     (filters.nationalities.length > 0 ? 1 : 0)
   );
@@ -105,7 +125,7 @@ export function countBrollFilters(filters: BrollFilterValues): number {
 export function sameBrollFilters(a: BrollFilterValues, b: BrollFilterValues): boolean {
   return (
     a.gender === b.gender &&
-    a.skin === b.skin &&
+    a.ethnicity === b.ethnicity &&
     a.minAge === b.minAge &&
     a.maxAge === b.maxAge &&
     nationalitiesEqual(a.nationalities, b.nationalities)
@@ -116,7 +136,7 @@ type FilterableBrollFields = {
   age?: unknown;
   gender?: unknown;
   nationality?: unknown;
-  skin?: unknown;
+  ethnicity?: unknown;
 };
 
 function fieldAsText(value: unknown): string {
@@ -139,7 +159,7 @@ export function matchesBrollFilters(item: FilterableBrollFields, filters: BrollF
   if (!hasActiveBrollFilters(filters)) return true;
 
   if (filters.gender && !fieldAsText(item.gender).includes(filters.gender)) return false;
-  if (filters.skin && !fieldAsText(item.skin).includes(filters.skin)) return false;
+  if (filters.ethnicity && !fieldAsText(item.ethnicity).includes(filters.ethnicity)) return false;
 
   if (filters.nationalities.length) {
     const nationality = fieldAsText(item.nationality);

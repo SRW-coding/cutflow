@@ -20,7 +20,7 @@ import { Slider } from '@/components/ui/slider';
 import { cn } from '@/shared/ui/cn';
 import {
   BROLL_GENDER_OPTIONS,
-  BROLL_SKIN_OPTIONS,
+  BROLL_ETHNICITY_OPTIONS,
   countBrollFilters,
   EMPTY_BROLL_FILTERS,
   sameBrollFilters,
@@ -194,10 +194,10 @@ export function BrollFiltersPanel({
             <BrollFilterDropdown
               label="Ethnicity"
               icon={User}
-              value={draft.skin}
+              value={draft.ethnicity}
               placeholder="Any"
-              options={BROLL_SKIN_OPTIONS}
-              onChange={(skin) => setDraft((c) => ({ ...c, skin: skin as BrollFilterValues['skin'] }))}
+              options={BROLL_ETHNICITY_OPTIONS}
+              onChange={(ethnicity) => setDraft((c) => ({ ...c, ethnicity: ethnicity as BrollFilterValues['ethnicity'] }))}
               isDark={isDark}
             />
 

@@ -1,3 +1,4 @@
+import type { BrollFilterValues } from '@/features/brolls/components/broll-filter-model';
 import { createLogger } from '@/shared/logging/logger';
 
 const logger = createLogger('BrollLibraryApi');
@@ -10,6 +11,10 @@ export interface BrollLibraryItem {
   thumbnail_url?: string | null;
   type: 'image' | 'video';
   is_premium: boolean;
+  gender?: string | null;
+  ethnicity?: string | null;
+  age?: number | null;
+  nationality?: string | null;
 }
 
 export interface BrollSubcategory {
@@ -114,15 +119,40 @@ export function getCachedBrollLibrary(): BrollCategory[] | null {
   return null;
 }
 
+function hasServerFilters(filters?: BrollFilterValues): boolean {
+  if (!filters) return false;
+  // Nationality is NOT sent to the server: the frontend's nationality list uses
+  // country slugs (e.g. "united-states", "united-kingdom") that don't match the
+  // backend's lowercase codes (e.g. "american", "british"). The fuzzy
+  // term-based match in matchesBrollFilters handles nationality client-side.
+  return Boolean(filters.gender || filters.ethnicity || filters.minAge || filters.maxAge);
+}
+
+function buildLibraryQueryString(filters?: BrollFilterValues): string {
+  if (!filters) return '';
+  const params = new URLSearchParams();
+  if (filters.gender) params.set('gender', filters.gender);
+  if (filters.ethnicity) params.set('ethnicity', filters.ethnicity);
+  if (filters.minAge) params.set('minAge', filters.minAge);
+  if (filters.maxAge) params.set('maxAge', filters.maxAge);
+  const qs = params.toString();
+  return qs ? `?${qs}` : '';
+}
+
 /**
  * GET /brolls/library — nested categories with subcategories and asset URLs.
+ * Pass `filters` to push server-side narrowing for gender/ethnicity/age. The
+ * in-memory and localStorage caches only apply to unfiltered fetches.
+ * Nationality is filtered client-side because of slug-vs-code mismatch.
  */
-export async function fetchBrollLibrary(): Promise<BrollCategory[]> {
-  if (_libraryCache && Date.now() - _libraryCacheAt < LIBRARY_CACHE_TTL_MS) {
+export async function fetchBrollLibrary(filters?: BrollFilterValues): Promise<BrollCategory[]> {
+  const filtered = hasServerFilters(filters);
+
+  if (!filtered && _libraryCache && Date.now() - _libraryCacheAt < LIBRARY_CACHE_TTL_MS) {
     return _libraryCache;
   }
 
-  const url = `${getApiRoot()}/brolls/library`;
+  const url = `${getApiRoot()}/brolls/library${buildLibraryQueryString(filters)}`;
   let res: Response;
   try {
     res = await fetch(url, { method: 'GET', credentials: 'omit' });
@@ -174,9 +204,11 @@ export async function fetchBrollLibrary(): Promise<BrollCategory[]> {
     })),
   }));
 
-  _libraryCache = result;
-  _libraryCacheAt = Date.now();
-  writeLocalStorageCache(result);
+  if (!filtered) {
+    _libraryCache = result;
+    _libraryCacheAt = Date.now();
+    writeLocalStorageCache(result);
+  }
   return result;
 }
 
