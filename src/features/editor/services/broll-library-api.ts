@@ -1,4 +1,4 @@
-import type { BrollFilterValues } from '@/features/brolls/components/broll-filter-model';
+import type { BrollFilterValues } from '@/features/editor/deps/broll-filter-model';
 import { createLogger } from '@/shared/logging/logger';
 
 const logger = createLogger('BrollLibraryApi');
