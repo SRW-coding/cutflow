@@ -212,7 +212,7 @@ export async function fetchBrollLibrary(filters?: BrollFilterValues): Promise<Br
   return result;
 }
 
-export function suggestedFileNameForBroll(name: string, _assetUrl: string): string {
+export function suggestedFileNameForBroll(name: string): string {
   const cleaned = [...name]
     .map((c) => {
       const code = c.charCodeAt(0);

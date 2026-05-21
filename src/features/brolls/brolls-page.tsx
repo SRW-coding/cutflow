@@ -154,7 +154,7 @@ function HeroVideoBackground() {
 function triggerDirectAssetDownload(item: BrollLibraryItem) {
   const a = document.createElement('a');
   a.href = item.url;
-  a.download = suggestedFileNameForBroll(item.name, item.url);
+  a.download = suggestedFileNameForBroll(item.name);
   a.rel = 'noreferrer';
   a.target = '_blank';
   document.body.appendChild(a);
@@ -347,7 +347,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
         const res = await fetch(item.url, { mode: 'cors', credentials: 'omit', signal });
         if (!res.ok) throw new Error(`Download failed (${res.status})`);
         const blob = await res.blob();
-        const fileName = suggestedFileNameForBroll(item.name, item.url);
+        const fileName = suggestedFileNameForBroll(item.name);
         url = URL.createObjectURL(blob);
 
         const a = document.createElement('a');

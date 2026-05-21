@@ -143,7 +143,7 @@ export const BRollLibrary = memo(function BRollLibrary() {
             throw new Error(`Download failed (${res.status})`);
           }
           const blob = await res.blob();
-          const fileName = suggestedFileNameForBroll(item.name, item.url);
+          const fileName = suggestedFileNameForBroll(item.name);
           const mime = blob.type || (item.type === 'video' ? 'video/mp4' : 'image/jpeg');
           const file = new File([blob], fileName, { type: mime });
 
