@@ -6,7 +6,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/shared/ui/cn';
-import { useTheme } from '@/shared/theme/theme-provider';
+import { useTheme } from '@/shared/theme/use-theme';
 
 type ThemeToggleProps = {
   compact?: boolean;

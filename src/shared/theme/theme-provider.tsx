@@ -1,28 +1,11 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   applyThemeToDocument,
   persistTheme,
   readTheme,
   type CutflowTheme,
 } from '@/shared/theme/cutflow-theme';
-
-type ThemeContextValue = {
-  theme: CutflowTheme;
-  setTheme: (theme: CutflowTheme) => void;
-  toggleTheme: () => void;
-  isDark: boolean;
-  syncRouteTheme: (pathname: string) => void;
-};
-
-const ThemeContext = createContext<ThemeContextValue | null>(null);
+import { ThemeContext } from '@/shared/theme/theme-context';
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<CutflowTheme>(() =>
@@ -65,12 +48,4 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
-}
-
-export function useTheme(): ThemeContextValue {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('useTheme must be used within ThemeProvider');
-  }
-  return context;
 }

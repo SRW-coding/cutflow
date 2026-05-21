@@ -51,7 +51,7 @@ import {
 } from '@/components/ui/select';
 import { useAuthStore } from '@/stores/auth-store';
 import { authApi } from '@/infrastructure/api/auth';
-import { useTheme } from '@/shared/theme/theme-provider';
+import { useTheme } from '@/shared/theme/use-theme';
 
 const HERO_BACKGROUND_VIDEOS = [
   '/assets/hero/stbg.mp4',

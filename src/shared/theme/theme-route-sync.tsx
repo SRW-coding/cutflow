@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useRouterState } from '@tanstack/react-router';
-import { useTheme } from '@/shared/theme/theme-provider';
+import { useTheme } from '@/shared/theme/use-theme';
 
 /** Keeps document theme in sync when navigating (unified storage; route default only if unset). */
 export function ThemeRouteSync() {
