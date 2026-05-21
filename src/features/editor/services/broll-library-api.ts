@@ -212,7 +212,7 @@ export async function fetchBrollLibrary(filters?: BrollFilterValues): Promise<Br
   return result;
 }
 
-export function suggestedFileNameForBroll(name: string, assetUrl: string): string {
+export function suggestedFileNameForBroll(name: string, _assetUrl: string): string {
   const cleaned = [...name]
     .map((c) => {
       const code = c.charCodeAt(0);
@@ -222,19 +222,10 @@ export function suggestedFileNameForBroll(name: string, assetUrl: string): strin
     })
     .join('')
     .trim() || 'b-roll';
-  let ext = '.mp4';
-  try {
-    const u = new URL(assetUrl);
-    const last = u.pathname.split('/').pop() ?? '';
-    if (last.includes('.')) {
-      ext = last.slice(last.lastIndexOf('.'));
-    }
-  } catch {
-    /* keep default */
-  }
-  const lower = cleaned.toLowerCase();
-  if (ext && lower.endsWith(ext.toLowerCase())) {
-    return cleaned;
-  }
-  return `${cleaned}${ext}`;
+
+  // Force .mp4 regardless of the source container — typical broll assets are
+  // H.264/AAC inside MOV, which players treat as MP4 when the file is renamed.
+  if (cleaned.toLowerCase().endsWith('.mp4')) return cleaned;
+  const stripped = cleaned.replace(/\.(mov|mp4|webm|m4v|avi|mkv)$/i, '');
+  return `${stripped}.mp4`;
 }
