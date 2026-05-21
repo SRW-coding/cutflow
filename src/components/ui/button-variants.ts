@@ -5,12 +5,17 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground shadow hover:bg-primary/90',
+        default:
+          'broll-gradient-btn border-0 text-white shadow-md hover:brightness-95 active:brightness-90 [&_svg]:stroke-white [&_svg]:text-white',
+        gradient:
+          'broll-gradient-btn border-0 text-white shadow-md hover:brightness-95 active:brightness-90 [&_svg]:stroke-white [&_svg]:text-white',
         destructive: 'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',
-        outline: 'border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground',
-        secondary: 'bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80',
-        ghost: 'hover:bg-accent hover:text-accent-foreground',
-        link: 'text-primary underline-offset-4 hover:underline',
+        outline:
+          'border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground [&_svg]:cutflow-gradient-icon',
+        secondary:
+          'bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80 [&_svg]:cutflow-gradient-icon',
+        ghost: 'hover:bg-accent hover:text-accent-foreground [&_svg]:cutflow-gradient-icon',
+        link: 'text-[#fd8b0c] underline-offset-4 hover:text-[#fb0302] hover:underline',
       },
       size: {
         default: 'h-9 px-4 py-2',

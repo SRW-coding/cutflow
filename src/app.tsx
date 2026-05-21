@@ -2,7 +2,9 @@ import { useEffect } from 'react';
 import { RouterProvider, createRouter } from '@tanstack/react-router';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { GlobalTooltip } from '@/components/ui/global-tooltip';
-import { Toaster } from '@/components/ui/sonner';
+import { ThemedSonner } from '@/components/ui/themed-sonner';
+import { GlobalGradientDefs } from '@/components/theme/global-gradient-defs';
+import { ThemeProvider } from '@/shared/theme/theme-provider';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { routeTree } from './routeTree.gen';
 import { useAuthStore } from '@/stores/auth-store';
@@ -62,11 +64,14 @@ export function App() {
   // ErrorBoundary for graceful error recovery
   return (
     <ErrorBoundary level="app">
-      <TooltipProvider delayDuration={300}>
-        <RouterProvider router={router} />
-        <GlobalTooltip />
-        <Toaster />
-      </TooltipProvider>
+      <ThemeProvider>
+        <GlobalGradientDefs />
+        <TooltipProvider delayDuration={300}>
+          <RouterProvider router={router} />
+          <GlobalTooltip />
+          <ThemedSonner />
+        </TooltipProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

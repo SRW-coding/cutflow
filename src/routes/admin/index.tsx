@@ -10,7 +10,6 @@ function AdminOverview() {
   return (
     <AdminShell
       title="Overview"
-      description="Quick access to admin areas. All data shown is mock UI only."
     >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Link

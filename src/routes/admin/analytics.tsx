@@ -18,7 +18,7 @@ function AdminAnalyticsPage() {
   return (
     <AdminShell
       title="Analytics"
-      description="High-level app metrics. Numbers are static mock data for layout review."
+      description="High-level app metrics and usage."
     >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard

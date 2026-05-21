@@ -7,6 +7,7 @@ const logger = createLogger('ProjectsIndex');
 import { Button } from '@/components/ui/button';
 import { Plus, Upload, FolderOpen, File, LayoutDashboard } from 'lucide-react';
 import { FreeCutLogo } from '@/components/brand/freecut-logo';
+import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { ProjectList } from '@/features/projects/components/project-list';
 import { ProjectForm } from '@/features/projects/components/project-form';
 import {
@@ -241,24 +242,35 @@ function ProjectsIndex() {
     <>
       <div className="min-h-screen bg-background">
         {/* Header */}
-        <div className="panel-header border-b border-border">
+        <div className="cutflow-top-nav sticky top-0 z-40 border-b border-white/10">
           <div className="max-w-[1920px] mx-auto px-6 py-5 flex items-center justify-between">
             <Link to="/">
               <FreeCutLogo variant="full" size="md" className="hover:opacity-80 transition-opacity" />
             </Link>
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="lg" className="gap-2" asChild>
+              <ThemeToggle compact />
+              <Button
+                variant="outline"
+                size="lg"
+                className="gap-2 border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white"
+                asChild
+              >
                 <Link to="/dashboard">
-                  <LayoutDashboard className="w-4 h-4" />
+                  <LayoutDashboard className="w-4 h-4 stroke-white" />
                   Dashboard
                 </Link>
               </Button>
-              <Button variant="outline" size="lg" className="gap-2" onClick={handleImportClick}>
-                <Upload className="w-4 h-4" />
+              <Button
+                variant="outline"
+                size="lg"
+                className="gap-2 border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white"
+                onClick={handleImportClick}
+              >
+                <Upload className="w-4 h-4 stroke-white" />
                 Import Project
               </Button>
               <Link to="/projects/new">
-                <Button size="lg" className="gap-2">
+                <Button variant="gradient" size="lg" className="gap-2">
                   <Plus className="w-4 h-4" />
                   New Project
                 </Button>

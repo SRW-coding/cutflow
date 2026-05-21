@@ -4,7 +4,6 @@ import { CreditCard, History, Link2, User } from 'lucide-react';
 import { Sparkles } from 'lucide-react';
 import { FreeCutLogo } from '@/components/brand/freecut-logo';
 import { HeaderProfileMenu } from '@/components/shell/header-profile-menu';
-import { Separator } from '@/components/ui/separator';
 import { cn } from '@/shared/ui/cn';
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -32,16 +31,15 @@ export function UserDashboardShell({
 
   return (
     <div className="min-h-screen bg-muted/30 text-foreground">
-      <header className="panel-header border-b border-border bg-background">
+      <header className="cutflow-top-nav sticky top-0 z-40 border-b border-white/10">
         <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-4 px-6 py-4">
           <div className="flex min-w-0 items-center gap-4">
             <Link to="/" className="shrink-0">
               <FreeCutLogo variant="full" size="md" className="opacity-90 transition-opacity hover:opacity-100" />
             </Link>
-            <Separator orientation="vertical" className="hidden h-8 sm:block" />
-            <div className="min-w-0">
+            <div className="min-w-0 pl-1">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 shrink-0 text-primary" />
+                <Sparkles className="h-4 w-4 shrink-0 cutflow-gradient-icon" />
                 <h1 className="truncate text-sm font-semibold tracking-tight sm:text-base">Dashboard</h1>
               </div>
             </div>
@@ -65,15 +63,17 @@ export function UserDashboardShell({
                 const itemClass = cn(
                   'flex w-full items-center gap-2 px-4 py-3 text-sm transition-colors border-l-2',
                   active
-                    ? 'border-primary bg-primary/8 font-semibold text-foreground'
+                    ? 'border-[#fd8b0c] bg-[#fff5f0] font-semibold text-[#111] dark:bg-[#fd8b0c]/10 dark:text-foreground'
                     : 'border-transparent text-muted-foreground',
-                  enabled ? 'hover:bg-muted/70 hover:text-foreground' : 'opacity-60'
+                  enabled
+                    ? 'hover:bg-[#fff5f0]/80 hover:text-[#fb0302] dark:hover:bg-muted/70 dark:hover:text-foreground'
+                    : 'opacity-60'
                 );
 
                 if (enabled && to) {
                   return (
                     <Link key={label} to={to} className={itemClass}>
-                      <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <Icon className="h-4 w-4 shrink-0 cutflow-gradient-icon" />
                       <span>{label}</span>
                     </Link>
                   );

@@ -52,7 +52,7 @@ function AdminUsersPage() {
   return (
     <AdminShell
       title="Users"
-      description="Directory of accounts. Table is populated with mock rows only."
+      description="Directory of accounts."
     >
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
         <div className="relative max-w-sm flex-1 sm:max-w-xs">
@@ -131,7 +131,7 @@ function AdminUsersPage() {
         </div>
         <div className="flex items-center justify-between border-t border-border px-4 py-3 text-xs text-muted-foreground">
           <span>
-            Showing {MOCK_USERS.length} of {formatInt(MOCK_ANALYTICS.totalUsers)} (mock)
+            Showing {MOCK_USERS.length} of {formatInt(MOCK_ANALYTICS.totalUsers)}
           </span>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" disabled className="h-8 opacity-60">
@@ -147,9 +147,9 @@ function AdminUsersPage() {
       <Dialog open={editUserOpen} onOpenChange={setEditUserOpen}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle>Edit user (mock)</DialogTitle>
+            <DialogTitle>Edit user</DialogTitle>
             <DialogDescription>
-              UI-only form preview. This does not persist — wire to your backend later.
+              Update account details for {selectedUser?.name ?? 'this user'}.
             </DialogDescription>
           </DialogHeader>
 
@@ -201,9 +201,9 @@ function AdminUsersPage() {
       <Dialog open={rolesOpen} onOpenChange={setRolesOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Roles & permissions (mock)</DialogTitle>
+            <DialogTitle>Roles & permissions</DialogTitle>
             <DialogDescription>
-              Preview of what you might assign to <span className="font-medium">{selectedUser?.name ?? 'this user'}</span>.
+              Roles assigned to <span className="font-medium">{selectedUser?.name ?? 'this user'}</span>.
             </DialogDescription>
           </DialogHeader>
 
@@ -227,9 +227,6 @@ function AdminUsersPage() {
                       <div className="text-sm font-medium">{r.name}</div>
                       <div className="mt-0.5 text-xs text-muted-foreground">{r.description}</div>
                     </div>
-                    <span className="shrink-0 rounded-md border border-border bg-background px-2 py-0.5 text-[10px] font-mono text-muted-foreground">
-                      mock
-                    </span>
                   </button>
                 ))}
               </div>
@@ -237,7 +234,7 @@ function AdminUsersPage() {
 
             <div className="rounded-xl border border-border bg-card">
               <div className="border-b border-border px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Permission preview
+                Permissions
               </div>
               <div className="p-4 space-y-2">
                 {MOCK_PERMISSION_DEFS.map((p) => (
@@ -250,7 +247,7 @@ function AdminUsersPage() {
                       <div className="mt-0.5 font-mono text-[10px] text-muted-foreground">{p.id}</div>
                     </div>
                     <span className="shrink-0 rounded-md border border-border bg-background px-2 py-0.5 text-[10px] text-muted-foreground">
-                      —{/* intentionally undecided in mock */}
+                      —
                     </span>
                   </div>
                 ))}
@@ -272,9 +269,8 @@ function AdminUsersPage() {
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete user (mock)</AlertDialogTitle>
+            <AlertDialogTitle>Delete user</AlertDialogTitle>
             <AlertDialogDescription>
-              This is a mock confirmation screen. No data will be deleted.
               {selectedUser ? (
                 <>
                   <span className="mt-2 block">

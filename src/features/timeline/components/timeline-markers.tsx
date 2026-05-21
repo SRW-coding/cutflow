@@ -33,6 +33,12 @@ interface MarkerInterval {
   minorTicks: number;
 }
 
+function getTimelineRulerColor(cssVar: string, fallback: string): string {
+  if (typeof document === 'undefined') return fallback;
+  const value = getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim();
+  return value || fallback;
+}
+
 // Tile configuration - 1000px tiles for faster individual renders and better cache granularity
 const TILE_WIDTH = 1000;
 const MAX_VISIBLE_MINOR_MARKERS = 72;
@@ -159,7 +165,10 @@ function drawTile(
     // Major tick line - only draw if within tile bounds
     if (x >= 0 && x <= actualTileWidth) {
       const lineX = Math.round(x) + 0.5;
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.strokeStyle = getTimelineRulerColor(
+        '--timeline-ruler-tick-major',
+        'rgba(255, 255, 255, 0.28)'
+      );
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(lineX, 0);
@@ -173,7 +182,10 @@ function drawTile(
       const lastTickX = x + tickSpacing * (markerConfig.minorTicks - 1);
       if (lastTickX < 0 || x > actualTileWidth) continue;
 
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.strokeStyle = getTimelineRulerColor(
+        '--timeline-ruler-tick-minor',
+        'rgba(255, 255, 255, 0.12)'
+      );
       ctx.lineWidth = 1;
 
       for (let j = 1; j < markerConfig.minorTicks; j++) {
@@ -258,11 +270,10 @@ function syncLabels(
     const isNew = !span;
     if (!span) {
       span = document.createElement('span');
-      span.className = 'absolute text-xs text-white/60 select-none whitespace-nowrap';
+      span.className = 'timeline-timecode-label absolute text-xs select-none whitespace-nowrap';
       span.style.top = '2px';
       span.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
       span.style.fontFeatureSettings = '"tnum"';
-      span.style.textShadow = '1px 1px 0 rgba(0, 0, 0, 0.5)';
       span.style.zIndex = '24';
       container.appendChild(span);
       pool.set(i, span);

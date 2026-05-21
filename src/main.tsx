@@ -4,7 +4,12 @@ import { toast } from 'sonner';
 import { App } from './app';
 import { initializeDebugUtils } from '@/app/debug';
 import { createLogger } from '@/shared/logging/logger';
+import { applyThemeToDocument, readTheme } from '@/shared/theme/cutflow-theme';
 import './index.css';
+
+applyThemeToDocument(
+  readTheme(typeof window !== 'undefined' ? window.location.pathname : undefined),
+);
 
 const log = createLogger('App');
 

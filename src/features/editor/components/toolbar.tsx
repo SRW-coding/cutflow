@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
+import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { LocalInferenceStatusPill } from './local-inference-status-pill';
 import { SettingsDialog } from './settings-dialog';
 import { ShortcutsDialog } from './shortcuts-dialog';
@@ -107,6 +108,8 @@ export const Toolbar = memo(function Toolbar({
       <div className="flex-1" />
 
       <LocalInferenceStatusPill />
+
+      <ThemeToggle compact variant="surface" />
 
       <ShortcutsDialog
         open={showShortcutsDialog}

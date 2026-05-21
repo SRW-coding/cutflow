@@ -20,7 +20,7 @@
   --color-timeline-shape: oklch(0.68 0.19 45);
 
   /* Playhead color */
-  --color-timeline-playhead: oklch(0.68 0.19 45);    /* Orange (matches primary) */
+  --color-timeline-playhead: #fd8b0c;               /* brand orange playhead */
 
   /* In/Out marker colors */
   --color-timeline-in: oklch(0.65 0.18 142);         /* Green - in point */
@@ -34,8 +34,8 @@
   --color-timeline-marker: oklch(0.65 0.20 250);     /* Blue - timeline markers */
 
   /* Snap/Join indicator colors */
-  --color-timeline-snap: #f97316;                    /* orange-500 - snap indicator */
-  --color-timeline-join: #fb923c;                    /* orange-400 - join indicator */
+  --color-timeline-snap: #fd8b0c;                    /* brand orange - snap indicator */
+  --color-timeline-join: #fee51b;                    /* brand yellow - join indicator */
 
 
   --color-video-preview-background: oklch(0.1914 0 58);
@@ -152,6 +152,27 @@ body.timeline-item-drag-cursor-not-allowed * {
   contain-intrinsic-size:
     var(--editor-timeline-sidebar-width, 176px)
     var(--editor-timeline-track-height, 72px);
+}
+
+/* Ruler timecodes — readable in light and dark editor themes */
+html.dark,
+:root {
+  --timeline-ruler-tick-major: rgba(255, 255, 255, 0.28);
+  --timeline-ruler-tick-minor: rgba(255, 255, 255, 0.12);
+  --timeline-ruler-label-color: rgba(255, 255, 255, 0.65);
+  --timeline-ruler-label-shadow: 1px 1px 0 rgba(0, 0, 0, 0.45);
+}
+
+html.light {
+  --timeline-ruler-tick-major: rgba(0, 0, 0, 0.24);
+  --timeline-ruler-tick-minor: rgba(0, 0, 0, 0.14);
+  --timeline-ruler-label-color: rgba(0, 0, 0, 0.68);
+  --timeline-ruler-label-shadow: 1px 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.timeline-timecode-label {
+  color: var(--timeline-ruler-label-color);
+  text-shadow: var(--timeline-ruler-label-shadow);
 }
 
 /* Filmstrip loading shimmer animation */

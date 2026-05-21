@@ -12,7 +12,7 @@ function AdminProfilePage() {
   return (
     <AdminShell
       title="Admin profile"
-      description="Account settings for the signed-in administrator. UI only — nothing is persisted."
+      description="Account settings for the signed-in administrator."
     >
       <div className="max-w-lg rounded-xl border border-border bg-card p-6 shadow-sm">
         <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left">

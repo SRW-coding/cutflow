@@ -1,4 +1,4 @@
-/** Design-only mock data for admin pages */
+/** Sample data for admin pages */
 
 export const MOCK_ANALYTICS = {
   totalUsers: 12_847,
@@ -31,7 +31,7 @@ export function formatInt(n: number) {
   return n.toLocaleString();
 }
 
-/** Design-only: permission keys + human labels */
+/** Permission keys and display labels */
 export const MOCK_PERMISSION_DEFS: { id: string; label: string }[] = [
   { id: 'users.view', label: 'View users' },
   { id: 'users.edit', label: 'Edit users' },

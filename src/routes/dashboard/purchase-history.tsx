@@ -18,7 +18,6 @@ function PurchaseHistoryPage() {
       <section className="rounded-md border border-border bg-background">
         <div className="px-6 py-4">
           <div className="text-sm font-semibold">Purchases</div>
-          <p className="mt-1 text-xs text-muted-foreground">Design-only preview. This list is mock data.</p>
         </div>
         <Separator />
 

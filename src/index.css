@@ -25,10 +25,11 @@
 
     /* new primary red #fb0302 new primary yellow #fee51b */
 
-    /* Primary - Orange accent (playback, active states) */
-    --primary: oklch(54.179% 0.22292 332.367);             /* #FF8C3A - Vibrant orange */
-    --primary-foreground: oklch(0.95 0 0);            /* #f2f2f2 - Primary text */
-    /* --primary-foreground: oklch(0.12 0 0);      Dark text on primary */
+    /* Primary — brand orange (#fd8b0c), not purple/magenta */
+    --cutflow-brand: #fd8b0c;
+    --cutflow-brand-deep: #fb0302;
+    --primary: oklch(0.745 0.168 55);
+    --primary-foreground: oklch(0.98 0 0);
 
     /* Secondary - Subtle panel variation */
     --secondary: oklch(0.22 0 0);               /* #383838 - Secondary surfaces */
@@ -49,7 +50,7 @@
     /* Borders - Subtle separators */
     --border: oklch(0.25 0 0);                  /* #404040 - Borders */
     --input: oklch(0.24 0 0);                   /* #3d3d3d - Input borders */
-    --ring: oklch(55.515% 0.2017 331.394);                /* Orange focus ring */
+    --ring: oklch(0.745 0.168 55);
 
     /* Panel system - Layered depth */
     --panel-bg: oklch(0.18 0 0);                /* #2e2e2e - Panels */
@@ -59,17 +60,59 @@
     /* Sidebar */
     --sidebar: oklch(0.18 0 0);
     --sidebar-foreground: oklch(0.92 0 0);
-    --sidebar-primary: oklch(54.179% 0.22292 332.367);
+    --sidebar-primary: oklch(0.745 0.168 55);
     --sidebar-primary-foreground: oklch(0.12 0 0);
     --sidebar-accent: oklch(0.22 0 0);
     --sidebar-accent-foreground: oklch(0.92 0 0);
     --sidebar-border: oklch(0.25 0 0);
-    --sidebar-ring: oklch(55.515% 0.2017 331.394);
+    --sidebar-ring: oklch(0.745 0.168 55);
 
     --radius: 0.5rem;
 
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --font-mono: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+  }
+
+  /* Light mode — matches b-roll library page light theme */
+  html.light {
+    color-scheme: light;
+
+    --cutflow-brand: #fd8b0c;
+    --cutflow-brand-deep: #fb0302;
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.2 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.2 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.2 0 0);
+    --primary: oklch(0.7 0.17 50);
+    --primary-foreground: oklch(0.98 0 0);
+    --secondary: oklch(0.96 0 0);
+    --secondary-foreground: oklch(0.28 0 0);
+    --muted: oklch(0.96 0 0);
+    --muted-foreground: oklch(0.5 0 0);
+    --accent: oklch(0.95 0 0);
+    --accent-foreground: oklch(0.2 0 0);
+    --destructive: oklch(0.58 0.22 25);
+    --destructive-foreground: oklch(0.98 0 0);
+    --border: oklch(0.9 0 0);
+    --input: oklch(0.9 0 0);
+    --ring: oklch(0.7 0.17 50);
+    --panel-bg: oklch(0.98 0 0);
+    --panel-header: oklch(0.96 0 0);
+    --timeline-bg: oklch(0.94 0 0);
+    --sidebar: oklch(0.98 0 0);
+    --sidebar-foreground: oklch(0.22 0 0);
+    --sidebar-primary: oklch(0.7 0.17 50);
+    --sidebar-primary-foreground: oklch(0.98 0 0);
+    --sidebar-accent: oklch(0.95 0 0);
+    --sidebar-accent-foreground: oklch(0.22 0 0);
+    --sidebar-border: oklch(0.9 0 0);
+    --sidebar-ring: oklch(0.7 0.17 50);
+  }
+
+  html.dark {
+    color-scheme: dark;
   }
 }
 
@@ -97,9 +140,75 @@
     -ms-user-select: none;
   }
 
-  /* Force dark mode always */
   html {
     color-scheme: dark;
+  }
+
+  html.light {
+    color-scheme: light;
+  }
+
+  /* Brand links — orange, not purple */
+  a[class*='text-primary'],
+  .text-primary {
+    color: var(--cutflow-brand, #fd8b0c);
+  }
+
+  a[class*='text-primary']:hover,
+  .hover\:text-primary:hover,
+  .hover\:text-primary\/80:hover {
+    color: var(--cutflow-brand-deep, #fb0302);
+  }
+
+  a[class*='text-primary']:focus-visible {
+    color: var(--cutflow-brand-deep, #fb0302);
+  }
+
+  /* Pointable UI */
+  a[href],
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  [role='menuitem'],
+  [role='option'],
+  [role='tab'],
+  [role='switch'],
+  [role='checkbox'],
+  label[for],
+  summary,
+  select:not(:disabled),
+  input[type='button']:not(:disabled),
+  input[type='submit']:not(:disabled),
+  input[type='reset']:not(:disabled),
+  input[type='checkbox']:not(:disabled),
+  input[type='radio']:not(:disabled),
+  input[type='file']:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled='true'] {
+    cursor: not-allowed;
+  }
+
+  /* Brand gradient strokes for Lucide / SVG icons */
+  .cutflow-gradient-icon {
+    stroke: url(#cutflow-brand-gradient);
+    color: #fd8b0c;
+  }
+
+  .cutflow-gradient-icon path,
+  .cutflow-gradient-icon circle,
+  .cutflow-gradient-icon rect,
+  .cutflow-gradient-icon line,
+  .cutflow-gradient-icon polyline {
+    stroke: url(#cutflow-brand-gradient);
+  }
+
+  .cutflow-gradient-text {
+    background-image: linear-gradient(90deg, #fb0302 0%, #fd8b0c 50%, #fee51b 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
   }
 
   /* Monospace for technical data */
@@ -198,21 +307,21 @@
     background-image:
       radial-gradient(
         ellipse 80% 60% at 50% -10%,
-        oklch(54.179% 0.22292 332.367 / 0.34) 0%,
-        oklch(54.179% 0.22292 332.367 / 0.16) 30%,
+        oklch(0.745 0.168 55 / 0.34) 0%,
+        oklch(0.745 0.168 55 / 0.16) 30%,
         rgba(15, 15, 15, 0) 60%
       ),
       radial-gradient(
         ellipse 40% 50% at 12% 30%,
-        oklch(54.179% 0.22292 332.367 / 0.2) 0%,
+        oklch(0.745 0.168 55 / 0.2) 0%,
         rgba(15, 15, 15, 0) 70%
       ),
       radial-gradient(
         ellipse 40% 50% at 88% 70%,
-        oklch(54.179% 0.22292 332.367 / 0.16) 0%,
+        oklch(0.745 0.168 55 / 0.16) 0%,
         rgba(15, 15, 15, 0) 70%
       ),
-      linear-gradient(180deg, oklch(0.18 0.07 332) 0%, #131313 55%, #0f0f0f 100%);
+      linear-gradient(180deg, oklch(0.18 0.07 55) 0%, #131313 55%, #0f0f0f 100%);
   }
 
   /* Frosted sticky nav (X.com For You / Following tab style) */
@@ -239,11 +348,11 @@
 
   /* Subtle glow for active elements */
   .glow-primary {
-    box-shadow: 0 0 12px oklch(var(--primary) / 0.3);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 30%, transparent);
   }
 
   .glow-primary-sm {
-    box-shadow: 0 0 6px oklch(var(--primary) / 0.25);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--primary) 25%, transparent);
   }
 
   /* Cursor-following spotlight (aether.mom style). Tune size with --spot-size. */
@@ -323,13 +432,14 @@
     transition: opacity 0.18s ease;
     background: radial-gradient(
       var(--spot-size) circle at var(--spot-x) var(--spot-y),
-      rgb(239 51 64 / 0.16),
-      rgb(239 51 64 / 0.06) 32%,
+      rgb(253 139 12 / 0.14),
+      rgb(251 3 2 / 0.06) 32%,
       transparent 52%
     );
     pointer-events: none;
   }
 
+  /* Hover border — same linear gradient as .broll-gradient-btn / Download */
   .broll-card-spotlight::after {
     content: '';
     position: absolute;
@@ -338,12 +448,7 @@
     border-radius: inherit;
     opacity: var(--spot-opacity);
     transition: opacity 0.18s ease;
-    background: radial-gradient(
-      calc(var(--spot-size) * 0.7) circle at var(--spot-x) var(--spot-y),
-      rgb(239 51 64 / 0.55),
-      rgb(239 51 64 / 0.2) 26%,
-      transparent 48%
-    );
+    background: linear-gradient(90deg, #fb0302 0%, #fd8b0c 50%, #fee51b 100%);
     padding: 1px;
     -webkit-mask:
       linear-gradient(#fff 0 0) content-box,
@@ -358,10 +463,10 @@
 
   .broll-card-spotlight.is-spotlight-active {
     --spot-opacity: 1;
-    border-color: rgb(239 51 64 / 0.4);
+    border-color: transparent;
     box-shadow:
-      var(--glow-sx) var(--glow-sy) 18px -6px rgb(239 51 64 / 0.24),
-      var(--glow-sx) var(--glow-sy) 34px -12px rgb(239 51 64 / 0.12);
+      var(--glow-sx) var(--glow-sy) 20px -6px rgb(253 139 12 / 0.22),
+      var(--glow-sx) var(--glow-sy) 36px -12px rgb(251 3 2 / 0.1);
   }
 
   /* B-roll page — theme accent (softer red in dark mode) */
@@ -381,6 +486,92 @@
     --broll-accent: #c93a3a;
     --broll-accent-hover: #b33232;
     --broll-accent-soft: rgb(201 58 58 / 0.22);
+  }
+
+  /* Top app nav — always black (never follows light page background) */
+  .cutflow-top-nav,
+  .broll-navbar,
+  header.cutflow-top-nav,
+  header.broll-navbar {
+    background-color: #0f0f0f !important;
+    background-image: none !important;
+    color: #fff !important;
+    border-bottom-color: rgb(255 255 255 / 0.1) !important;
+  }
+
+  html.light .cutflow-top-nav,
+  html.light .broll-navbar,
+  html.light header.cutflow-top-nav,
+  html.light header.broll-navbar,
+  html.dark .cutflow-top-nav,
+  html.dark .broll-navbar {
+    background-color: #0f0f0f !important;
+    color: #fff !important;
+  }
+
+  .cutflow-top-nav .border-border,
+  .broll-navbar .border-border {
+    border-color: rgb(255 255 255 / 0.15) !important;
+  }
+
+  .cutflow-top-nav [data-slot='separator'],
+  .broll-navbar [data-slot='separator'] {
+    background-color: rgb(255 255 255 / 0.15) !important;
+  }
+
+  .cutflow-top-nav button.border-white\/20 svg,
+  .broll-navbar button.border-white\/20 svg {
+    stroke: #fff !important;
+    color: #fff !important;
+  }
+
+  /* Theme toggle — always matches black nav (never light card in html.light) */
+  .cutflow-top-nav .cutflow-theme-toggle,
+  .broll-navbar .cutflow-theme-toggle,
+  html.light .cutflow-top-nav .cutflow-theme-toggle,
+  html.light .broll-navbar .cutflow-theme-toggle,
+  html.dark .cutflow-top-nav .cutflow-theme-toggle,
+  html.dark .broll-navbar .cutflow-theme-toggle {
+    border-color: rgb(255 255 255 / 0.2) !important;
+    background-color: rgb(255 255 255 / 0.05) !important;
+    color: #fff !important;
+  }
+
+  .cutflow-top-nav .cutflow-theme-toggle:hover,
+  .broll-navbar .cutflow-theme-toggle:hover,
+  html.light .cutflow-top-nav .cutflow-theme-toggle:hover,
+  html.light .broll-navbar .cutflow-theme-toggle:hover {
+    background-color: rgb(255 255 255 / 0.1) !important;
+    color: #fff !important;
+  }
+
+  .cutflow-top-nav .cutflow-theme-toggle svg,
+  .broll-navbar .cutflow-theme-toggle svg {
+    stroke: #fff !important;
+    color: #fff !important;
+  }
+
+  .cutflow-top-nav .cutflow-nav-profile-btn,
+  .broll-navbar .cutflow-nav-profile-btn,
+  html.light .cutflow-top-nav .cutflow-nav-profile-btn,
+  html.light .broll-navbar .cutflow-nav-profile-btn {
+    border-color: rgb(255 255 255 / 0.2) !important;
+    background-color: rgb(255 255 255 / 0.05) !important;
+    color: #fff !important;
+  }
+
+  .cutflow-top-nav .cutflow-nav-profile-btn:hover,
+  .broll-navbar .cutflow-nav-profile-btn:hover,
+  html.light .cutflow-top-nav .cutflow-nav-profile-btn:hover,
+  html.light .broll-navbar .cutflow-nav-profile-btn:hover {
+    background-color: rgb(255 255 255 / 0.1) !important;
+    color: #fff !important;
+  }
+
+  .cutflow-top-nav .cutflow-nav-profile-btn svg,
+  .broll-navbar .cutflow-nav-profile-btn svg {
+    stroke: #fff !important;
+    color: #fff !important;
   }
 
   /* B-roll navbar — login / sign-up hover sweep (L→R gradient, return to rest) */

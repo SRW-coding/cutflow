@@ -28,7 +28,7 @@ function DevelopersPage() {
         <div className="px-6 py-4">
           <div className="text-sm font-semibold">API keys</div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Use API keys to authenticate requests. Design-only preview.
+            Use API keys to authenticate requests.
           </p>
         </div>
         <Separator />
@@ -54,7 +54,7 @@ function DevelopersPage() {
         <div className="px-6 py-4">
           <div className="text-sm font-semibold">Webhooks</div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Send events to your server when things happen. Design-only preview.
+            Send events to your server when things happen.
           </p>
         </div>
         <Separator />

@@ -1,21 +1,18 @@
 import { Link } from '@tanstack/react-router';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Check,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Download,
   LayoutDashboard,
   Loader2,
   LogOut,
-  Moon,
   Play,
-  Sun,
   User,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { FreeCutLogo } from '@/components/brand/freecut-logo';
+import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { Button } from '@/components/ui/button';
 import {
   BrollLibraryHeaderSearchAnchor,
@@ -52,14 +49,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/stores/auth-store';
 import { authApi } from '@/infrastructure/api/auth';
+import { useTheme } from '@/shared/theme/theme-provider';
 
 const HERO_BACKGROUND_VIDEOS = [
   '/assets/hero/stbg.mp4',
@@ -174,22 +166,7 @@ function triggerDirectAssetDownload(item: BrollLibraryItem) {
 }
 
 export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
-  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(() => {
-    try {
-      return localStorage.getItem('brolls_theme') === 'dark' ? 'dark' : 'light';
-    } catch {
-      return 'light';
-    }
-  });
-  const isDarkTheme = themeMode === 'dark';
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('brolls_theme', themeMode);
-    } catch {
-      // Ignore storage errors (private mode, quota exceeded)
-    }
-  }, [themeMode]);
+  const { theme: themeMode, isDark: isDarkTheme } = useTheme();
 
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
@@ -444,12 +421,12 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
     <div
       data-theme={themeMode}
       className={[
-        'brolls-page [&_button]:cursor-pointer [&_[role=button]:not(:disabled)]:cursor-pointer',
+        'brolls-page [&_a]:cursor-pointer [&_button]:cursor-pointer [&_[role=button]:not(:disabled)]:cursor-pointer [&_label]:cursor-pointer',
         isDarkTheme ? 'min-h-screen bg-[#080808] text-white' : 'min-h-screen bg-white text-[#1f1f1f]',
       ].join(' ')}
     >
       {/* ── Header ── */}
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0f0f0f] text-white">
+      <header className="broll-navbar cutflow-top-nav sticky top-0 z-50 border-b border-white/10 text-white">
         <div className="mx-auto flex max-w-[1400px] items-center gap-2 px-2 py-3 sm:gap-4 sm:px-4 sm:py-4 lg:px-6">
           <div className="flex items-center gap-4 min-w-0">
             <Link to="/" className="shrink-0">
@@ -528,45 +505,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
                 </Link>
               </>
             )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="ml-1 h-8 w-auto gap-0.5 border-white/20 bg-white/5 px-2 text-white hover:bg-white/10 hover:text-white"
-                  aria-label={isDarkTheme ? 'Dark mode' : 'Light mode'}
-                >
-                  {isDarkTheme ? (
-                    <Moon className="h-4 w-4 shrink-0" />
-                  ) : (
-                    <Sun className="h-4 w-4 shrink-0" />
-                  )}
-                  <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="min-w-[10rem] border-white/15 bg-[#151515] text-white"
-              >
-                <DropdownMenuItem
-                  onClick={() => setThemeMode('light')}
-                  className="cursor-pointer gap-2 focus:bg-white/10 focus:text-white"
-                >
-                  <Sun className="h-4 w-4" />
-                  <span className="flex-1">Light mode</span>
-                  {!isDarkTheme ? <Check className="h-4 w-4 text-[#ef3340]" /> : null}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setThemeMode('dark')}
-                  className="cursor-pointer gap-2 focus:bg-white/10 focus:text-white"
-                >
-                  <Moon className="h-4 w-4" />
-                  <span className="flex-1">Dark mode</span>
-                  {isDarkTheme ? <Check className="h-4 w-4 text-[#ef3340]" /> : null}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <ThemeToggle compact className="ml-1" />
           </div>
         </div>
       </header>

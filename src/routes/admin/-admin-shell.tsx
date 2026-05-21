@@ -3,7 +3,6 @@ import { Link, useRouterState } from '@tanstack/react-router';
 import { LayoutDashboard, BarChart3, Users, UserCircle, Shield, KeyRound } from 'lucide-react';
 import { FreeCutLogo } from '@/components/brand/freecut-logo';
 import { HeaderProfileMenu } from '@/components/shell/header-profile-menu';
-import { Separator } from '@/components/ui/separator';
 import { cn } from '@/shared/ui/cn';
 
 const NAV = [
@@ -27,19 +26,18 @@ export function AdminShell({
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="panel-header border-b border-border">
+      <header className="cutflow-top-nav sticky top-0 z-40 border-b border-white/10">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-6 py-4">
           <div className="flex min-w-0 items-center gap-4">
             <Link to="/" className="shrink-0">
               <FreeCutLogo variant="full" size="md" className="opacity-90 transition-opacity hover:opacity-100" />
             </Link>
-            <Separator orientation="vertical" className="hidden h-8 sm:block" />
-            <div className="min-w-0">
+            <div className="min-w-0 pl-1">
               <div className="flex items-center gap-2">
                 <Shield className="h-4 w-4 shrink-0 text-primary" />
                 <h1 className="truncate text-sm font-semibold tracking-tight sm:text-base">Admin</h1>
               </div>
-              <p className="truncate text-xs text-muted-foreground">Design preview — no backend</p>
+              <p className="truncate text-xs text-muted-foreground">Administrator</p>
             </div>
           </div>
           <HeaderProfileMenu

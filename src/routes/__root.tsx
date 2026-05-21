@@ -1,23 +1,27 @@
 import { createRootRoute, Link, Outlet } from '@tanstack/react-router';
 import { FreeCutLogo } from '@/components/brand/freecut-logo';
 import { Button } from '@/components/ui/button';
+import { ThemeRouteSync } from '@/shared/theme/theme-route-sync';
 
 export const Route = createRootRoute({
   component: () => (
     <>
+      <ThemeRouteSync />
       <Outlet />
     </>
   ),
   notFoundComponent: () => (
     <div className="min-h-screen bg-background">
-      <header className="panel-header border-b border-border">
+      <header className="cutflow-top-nav border-b border-white/10">
         <div className="max-w-[1920px] mx-auto px-6 py-5 flex items-center justify-between gap-4">
           <Link to="/" className="shrink-0">
             <FreeCutLogo variant="full" size="md" className="hover:opacity-80 transition-opacity" />
           </Link>
           <div className="flex items-center gap-2 shrink-0">
             <Link to="/projects">
-              <Button variant="outline" size="lg">Projects</Button>
+              <Button variant="outline" size="lg" className="border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white">
+                Projects
+              </Button>
             </Link>
           </div>
         </div>

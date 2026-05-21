@@ -69,7 +69,7 @@ export function StatusBadge({ status }: { status: 'active' | 'inactive' | 'suspe
   );
 }
 
-/** Icon-only row action (design preview — no backend). */
+/** Icon-only row action for admin tables. */
 export function AdminIconButton({
   label,
   icon: Icon,

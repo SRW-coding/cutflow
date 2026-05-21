@@ -81,7 +81,6 @@ function PlansPage() {
       <section className="rounded-md border border-border bg-background">
         <div className="px-6 py-4">
           <div className="text-sm font-semibold">Billing</div>
-          <p className="mt-1 text-xs text-muted-foreground">Design-only preview. Billing actions are disabled.</p>
         </div>
         <Separator />
         <div className="flex flex-wrap gap-2 px-6 py-4">

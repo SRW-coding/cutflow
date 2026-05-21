@@ -1,4 +1,4 @@
-/** Design-only mock data for the user dashboard (no backend). */
+/** Sample dashboard data for layout and empty states. */
 
 export const MOCK_DASHBOARD_USER = {
   fullName: 'Roohan Sarna',

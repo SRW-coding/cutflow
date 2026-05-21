@@ -58,7 +58,7 @@ function AdminRolesPage() {
   return (
     <AdminShell
       title="Roles & permissions"
-      description="Which roles exist and what each can do. Mock matrix for UI — wire to your auth service later."
+      description="Which roles exist and what each can do."
     >
       <section className="mb-10">
         <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Roles</h3>
@@ -154,7 +154,7 @@ function AdminRolesPage() {
                                 ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-300'
                                 : 'border-border/80 bg-muted/30 text-muted-foreground'
                             )}
-                            title={`Open permission (mock): ${allowed ? 'Allowed' : 'Denied'}`}
+                            title={`${allowed ? 'Allowed' : 'Denied'}: ${perm.label}`}
                           >
                             {allowed ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} /> : <Minus className="h-3.5 w-3.5" />}
                           </button>
@@ -172,8 +172,8 @@ function AdminRolesPage() {
       <Dialog open={editRoleOpen} onOpenChange={setEditRoleOpen}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle>Edit role (mock)</DialogTitle>
-            <DialogDescription>UI-only preview. This does not persist yet.</DialogDescription>
+            <DialogTitle>Edit role</DialogTitle>
+            <DialogDescription>Update role details and permissions.</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-3">
@@ -189,7 +189,7 @@ function AdminRolesPage() {
 
             <div className="rounded-xl border border-border bg-card">
               <div className="border-b border-border px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Permissions (preview)
+                Permissions
               </div>
               <div className="max-h-[280px] overflow-auto p-4 space-y-2">
                 {MOCK_PERMISSION_DEFS.map((p) => {
@@ -234,9 +234,8 @@ function AdminRolesPage() {
       <AlertDialog open={deleteRoleOpen} onOpenChange={setDeleteRoleOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete role (mock)</AlertDialogTitle>
+            <AlertDialogTitle>Delete role</AlertDialogTitle>
             <AlertDialogDescription>
-              This is a mock confirmation screen. No role will be deleted.
               {selectedRole ? (
                 <span className="mt-2 block">
                   You’re about to delete <span className="font-medium">{selectedRole.name}</span>.
@@ -259,9 +258,9 @@ function AdminRolesPage() {
       <Dialog open={permOpen} onOpenChange={setPermOpen}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle>Permission details (mock)</DialogTitle>
+            <DialogTitle>Permission details</DialogTitle>
             <DialogDescription>
-              Preview for <span className="font-medium">{selectedRole?.name ?? 'role'}</span> and permission{' '}
+              Access for <span className="font-medium">{selectedRole?.name ?? 'role'}</span> —{' '}
               <span className="font-mono text-[12px]">{selectedPerm?.id ?? '—'}</span>.
             </DialogDescription>
           </DialogHeader>
@@ -286,9 +285,6 @@ function AdminRolesPage() {
                 >
                   {selectedRole?.permissionIds.includes(selectedPermId ?? '') ? 'Allowed' : 'Denied'}
                 </span>
-              </div>
-              <div className="mt-2 text-xs text-muted-foreground">
-                Click actions are mocked; wire this to your RBAC store later.
               </div>
             </div>
           </div>

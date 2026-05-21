@@ -20,7 +20,7 @@ function ConnectedAccountsPage() {
         <div className="px-6 py-4">
           <div className="text-sm font-semibold">Connected Accounts</div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Connect accounts to make sign-in easier. Design-only preview.
+            Connect accounts to make sign-in easier.
           </p>
         </div>
         <Separator />
