@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,87 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/shared/ui/cn';
 import { useCursorSpotlight } from '@/features/brolls/components/use-cursor-spotlight';
+
+const HERO_GRADIENT = 'from-[#fb0302] via-[#fd8b0c] to-[#fee51b]';
+
+function GradientSearchIcon({ className, strokeWidth = 2.75 }: { className?: string; strokeWidth?: number }) {
+  const gradientId = useId().replace(/:/g, '');
+
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient
+          id={gradientId}
+          x1="0"
+          y1="0"
+          x2="24"
+          y2="24"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop stopColor="#fb0302" />
+          <stop offset="0.5" stopColor="#fd8b0c" />
+          <stop offset="1" stopColor="#fee51b" />
+        </linearGradient>
+      </defs>
+      <circle cx="11" cy="11" r="8" stroke={`url(#${gradientId})`} strokeWidth={strokeWidth} />
+      <path
+        d="m21 21-4.35-4.35"
+        stroke={`url(#${gradientId})`}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function GradientSquarePlayIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient
+          id="broll-hero-gradient-play"
+          x1="0"
+          y1="0"
+          x2="24"
+          y2="24"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop stopColor="#fb0302" />
+          <stop offset="0.5" stopColor="#fd8b0c" />
+          <stop offset="1" stopColor="#fee51b" />
+        </linearGradient>
+      </defs>
+      <rect
+        x="3"
+        y="3"
+        width="18"
+        height="18"
+        rx="2"
+        stroke="url(#broll-hero-gradient-play)"
+        strokeWidth="2"
+      />
+      <path
+        d="M10 8.5V15.5L16 12L10 8.5Z"
+        stroke="url(#broll-hero-gradient-play)"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 function smoothstep(t: number): number {
   const x = Math.min(1, Math.max(0, t));
@@ -130,28 +211,42 @@ function BrollSearchBar({
               'w-[120px] rounded-none border-0 border-r shadow-none sm:w-[140px]',
               isDark
                 ? 'border-white/15 bg-[#151515] text-white hover:bg-[#202020]'
-                : 'border-[#d8d8d8] bg-white text-[#111] hover:bg-[#f7f7f7]',
+                : 'border-[#d8d8d8] bg-white text-[#111] hover:bg-[#f4f4f4]',
             )}
           >
-            <SelectValue />
+            <span className="flex items-center gap-2">
+             
+              <SelectValue />
+            </span>
           </SelectTrigger>
           <SelectContent
             className={cn(
-              isDark ? 'border-white/15 bg-[#151515] text-white' : 'border-[#d6d6d6] bg-white text-[#111]',
+              isDark
+                ? 'border-white/15 bg-[#151515] text-white'
+                : 'border-[#d6d6d6] bg-white text-[#111]',
             )}
           >
-            <SelectItem value="videos">Videos</SelectItem>
+            <SelectItem
+              value="videos"
+              className={cn(
+                'cursor-pointer',
+                isDark
+                  ? 'focus:bg-white/10 focus:text-white data-[highlighted]:bg-white/10 data-[highlighted]:text-white'
+                  : 'focus:bg-[#f4f4f4] focus:text-[#111] data-[highlighted]:bg-[#f4f4f4] data-[highlighted]:text-[#111]',
+              )}
+            >
+              <span className="flex items-center gap-2">
+                <GradientSquarePlayIcon className="h-5 w-5 shrink-0" />
+                Videos
+              </span>
+            </SelectItem>
           </SelectContent>
         </Select>
       )}
       <div className="relative min-w-0 flex-1">
-        <Search
-          className={cn(
-            'pointer-events-none absolute top-1/2 -translate-y-1/2',
-            iconSize,
-            iconLeft,
-            isDark ? 'text-white/55' : 'text-[#707070]',
-          )}
+        <GradientSearchIcon
+          strokeWidth={compact ? 2.5 : 2.75}
+          className={cn('pointer-events-none absolute top-1/2 -translate-y-1/2', iconSize, iconLeft)}
         />
         <Input
           value={query}
@@ -170,12 +265,12 @@ function BrollSearchBar({
         size="sm"
         className={cn(
           barHeight,
-          'shrink-0 rounded-none border-0 bg-[#ef3340] px-3 font-semibold text-white hover:bg-[#d92734] sm:px-5',
+          'broll-gradient-btn shrink-0 rounded-none px-3 font-semibold shadow-[0_10px_22px_rgba(0,0,0,0.28)] transition-[filter,transform] hover:brightness-95 active:brightness-90 sm:px-5',
         )}
         onClick={() => onQueryChange(query)}
         aria-label="Search"
       >
-        <Search className="h-5 w-5" />
+        <Search className="h-5 w-5" strokeWidth={2.75} />
         <span className="sr-only">Search</span>
       </Button>
       </div>
@@ -217,10 +312,17 @@ export function BrollLibraryHeroSearch({
         style={{ opacity: headingOpacity }}
       >
         <span className="block text-3xl sm:text-4xl md:text-[2.85rem] md:leading-tight">
-          Find The Perfect Clip
+          Find The{' '}
+          <span className={cn('bg-gradient-to-r bg-clip-text text-transparent', HERO_GRADIENT)}>
+            Perfect
+          </span>{' '}
+          Clip
         </span>
         <span className="block text-3xl sm:text-4xl md:text-[2.85rem] md:leading-tight">
-          For Your Next Masterpiece
+          For Your Next{' '}
+          <span className={cn('bg-gradient-to-r bg-clip-text text-transparent', HERO_GRADIENT)}>
+            Masterpiece
+          </span>
         </span>
       </h1>
 

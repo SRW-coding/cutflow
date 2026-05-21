@@ -1,6 +1,8 @@
 import { Link } from '@tanstack/react-router';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -19,11 +21,11 @@ import {
   BrollLibraryHeaderSearchAnchor,
   BrollLibraryHeroSearch,
 } from '@/features/brolls/components/broll-library-search';
-import { BrollFiltersPanel } from '@/features/brolls/components/broll-filters';
+import { BrollFiltersPanel, BrollFiltersToggle, GRADIENT_BTN } from '@/features/brolls/components/broll-filters';
 import {
-  BROLL_NATIONALITY_OPTIONS,
   EMPTY_BROLL_FILTERS,
   countBrollFilters,
+  matchesBrollFilters,
   type BrollFilterValues,
 } from '@/features/brolls/components/broll-filter-model';
 import { useCursorSpotlight } from '@/features/brolls/components/use-cursor-spotlight';
@@ -50,15 +52,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/stores/auth-store';
 import { authApi } from '@/infrastructure/api/auth';
 
 const HERO_BACKGROUND_VIDEOS = [
-  '/assets/hero/0109-53-3banec400z_1080__D.mp4',
-  '/assets/hero/66b22d2406b4320c51ed519e-lpt-sbpbxg_1080__D.mp4',
-  '/assets/hero/hero.mp4',
-  '/assets/hero/sunny-view-of-miami-beach-florida-usa-on-hot-day-2025-08-29-02-31-26-utc-r6hjf3xm43_1080__D.mp4',
+  '/assets/hero/stbg.mp4',
+  // '/assets/hero/0109-53-3banec400z_1080__D.mp4',
+  // '/assets/hero/66b22d2406b4320c51ed519e-lpt-sbpbxg_1080__D.mp4',
+  // '/assets/hero/hero.mp4',
+  // '/assets/hero/sunny-view-of-miami-beach-florida-usa-on-hot-day-2025-08-29-02-31-26-utc-r6hjf3xm43_1080__D.mp4',
 ] as const;
 
 type BrollItemWithMeta = BrollLibraryItem & {
@@ -66,13 +74,6 @@ type BrollItemWithMeta = BrollLibraryItem & {
   __categoryName: string;
   __subcategoryId: number;
   __subcategoryName: string;
-};
-
-type FilterableBrollFields = {
-  age?: unknown;
-  gender?: unknown;
-  nationality?: unknown;
-  skin?: unknown;
 };
 
 function shuffleInPlace<T>(arr: T[]): T[] {
@@ -128,49 +129,6 @@ function fingerprintLibrary(items: BrollItemWithMeta[]): string {
   return hash;
 }
 
-function fieldAsText(value: unknown): string {
-  if (typeof value === 'string') return value.toLowerCase();
-  if (typeof value === 'number') return String(value);
-  if (Array.isArray(value)) return value.map(fieldAsText).join(' ');
-  return '';
-}
-
-function fieldAsAge(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
-}
-
-function matchesBrollFilters(item: BrollItemWithMeta, filters: BrollFilterValues): boolean {
-  const filterable = item as BrollItemWithMeta & FilterableBrollFields;
-
-  if (filters.gender && !fieldAsText(filterable.gender).includes(filters.gender)) return false;
-  if (filters.skin && !fieldAsText(filterable.skin).includes(filters.skin)) return false;
-
-  if (filters.nationalities.length) {
-    const nationality = fieldAsText(filterable.nationality);
-    if (!nationality) return false;
-    const matchesNationality = filters.nationalities.some((value) => {
-      const option = BROLL_NATIONALITY_OPTIONS.find((candidate) => candidate.value === value);
-      const terms = option ? [option.value, option.label, ...option.terms] : [value];
-      return terms.some((term) => nationality.includes(term.toLowerCase()));
-    });
-    if (!matchesNationality) return false;
-  }
-
-  if (filters.minAge || filters.maxAge) {
-    const age = fieldAsAge(filterable.age);
-    if (age === null) return false;
-    if (filters.minAge && age < Number(filters.minAge)) return false;
-    if (filters.maxAge && age > Number(filters.maxAge)) return false;
-  }
-
-  return true;
-}
-
 function HeroVideoBackground() {
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -188,7 +146,7 @@ function HeroVideoBackground() {
   return (
     <video
       key={HERO_BACKGROUND_VIDEOS[activeIndex]}
-      className="absolute inset-0 h-full w-full object-cover opacity-75 [filter:hue-rotate(185deg)_saturate(1.25)]"
+      className="absolute inset-0 h-full w-full object-cover opacity-75"
       src={HERO_BACKGROUND_VIDEOS[activeIndex]}
       autoPlay
       muted
@@ -250,6 +208,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   const [searchKind, setSearchKind] = useState<'videos'>('videos');
   const [appliedFilters, setAppliedFilters] =
     useState<BrollFilterValues>(EMPTY_BROLL_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const activeFilterCount = useMemo(() => countBrollFilters(appliedFilters), [appliedFilters]);
 
   // Seed state from the persisted cache so repeat visits paint instantly
@@ -482,7 +441,13 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   const headerSearchAnchorRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className={isDarkTheme ? 'min-h-screen bg-[#080808] text-white' : 'min-h-screen bg-white text-[#1f1f1f]'}>
+    <div
+      data-theme={themeMode}
+      className={[
+        'brolls-page [&_button]:cursor-pointer [&_[role=button]:not(:disabled)]:cursor-pointer',
+        isDarkTheme ? 'min-h-screen bg-[#080808] text-white' : 'min-h-screen bg-white text-[#1f1f1f]',
+      ].join(' ')}
+    >
       {/* ── Header ── */}
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0f0f0f] text-white">
         <div className="mx-auto flex max-w-[1400px] items-center gap-2 px-2 py-3 sm:gap-4 sm:px-4 sm:py-4 lg:px-6">
@@ -495,9 +460,13 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
               />
             </Link>
             <div className="min-w-0">
-              <div className="text-sm font-bold text-white truncate">
-                Cutflow Video Library
-              </div>
+              <p className="truncate text-sm font-bold leading-none tracking-tight sm:text-[15px]">
+                <span className="text-white">Cutflow</span>
+                <span className="bg-gradient-to-r from-[#fb0302] via-[#fd8b0c] to-[#fee51b] bg-clip-text text-transparent">
+                  {' '}
+                  Video Library
+                </span>
+              </p>
               {/* <div className="text-xs text-muted-foreground truncate">
                 Choose a project to import into
               </div> */}
@@ -507,19 +476,6 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
           <BrollLibraryHeaderSearchAnchor anchorRef={headerSearchAnchorRef} />
 
           <div className="flex shrink-0 items-center gap-2">
-            <div
-              className="flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-2 py-1.5 text-white sm:px-3"
-              title={`Switch to ${isDarkTheme ? 'light' : 'dark'} mode`}
-            >
-              <Sun className="hidden h-3.5 w-3.5 text-white/70 sm:block" />
-              <Switch
-                checked={isDarkTheme}
-                onCheckedChange={(checked) => setThemeMode(checked ? 'dark' : 'light')}
-                aria-label="Toggle dark mode"
-                className="h-4 w-8 data-[state=checked]:bg-[#ef3340] data-[state=unchecked]:bg-white/25"
-              />
-              <Moon className="hidden h-3.5 w-3.5 text-white/70 sm:block" />
-            </div>
             {isAuthenticated ? (
               <>
                 <Link to="/dashboard">
@@ -557,18 +513,60 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="border-white/20 bg-transparent text-white hover:bg-white hover:text-[#111]"
+                    className="broll-nav-auth-btn broll-nav-auth-btn--login relative overflow-hidden border-white/20 bg-transparent text-white hover:bg-transparent hover:text-white"
                   >
-                    Log In
+                    <span className="relative z-[1]">Log In</span>
                   </Button>
                 </Link>
                 <Link to="/signup" search={{ redirect: '/brolls' }}>
-                  <Button size="sm" className="bg-white text-[#111] hover:bg-white/90">
-                    Sign Up Free
+                  <Button
+                    size="sm"
+                    className="broll-nav-auth-btn broll-nav-auth-btn--signup relative overflow-hidden border-0 bg-white text-[#111] hover:bg-white hover:text-[#111]"
+                  >
+                    <span className="relative z-[1]">Sign Up Free</span>
                   </Button>
                 </Link>
               </>
             )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="ml-1 h-8 w-auto gap-0.5 border-white/20 bg-white/5 px-2 text-white hover:bg-white/10 hover:text-white"
+                  aria-label={isDarkTheme ? 'Dark mode' : 'Light mode'}
+                >
+                  {isDarkTheme ? (
+                    <Moon className="h-4 w-4 shrink-0" />
+                  ) : (
+                    <Sun className="h-4 w-4 shrink-0" />
+                  )}
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="min-w-[10rem] border-white/15 bg-[#151515] text-white"
+              >
+                <DropdownMenuItem
+                  onClick={() => setThemeMode('light')}
+                  className="cursor-pointer gap-2 focus:bg-white/10 focus:text-white"
+                >
+                  <Sun className="h-4 w-4" />
+                  <span className="flex-1">Light mode</span>
+                  {!isDarkTheme ? <Check className="h-4 w-4 text-[#ef3340]" /> : null}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setThemeMode('dark')}
+                  className="cursor-pointer gap-2 focus:bg-white/10 focus:text-white"
+                >
+                  <Moon className="h-4 w-4" />
+                  <span className="flex-1">Dark mode</span>
+                  {isDarkTheme ? <Check className="h-4 w-4 text-[#ef3340]" /> : null}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
@@ -628,16 +626,42 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
           </div>
         )}
 
-        {isLoading ? (
-          <BrollGridSkeleton themeMode={themeMode} />
-        ) : filtered.length === 0 ? (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-            <BrollFiltersPanel
-              value={appliedFilters}
-              onApply={setAppliedFilters}
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-end justify-between gap-3 pb-1">
+            <div>
+              <h2
+                className={[
+                  'text-2xl font-semibold tracking-tight sm:text-3xl',
+                  isDarkTheme ? 'text-white' : 'text-[#111]',
+                ].join(' ')}
+              >
+                Recently Added
+              </h2>
+              <p className={isDarkTheme ? 'mt-1 text-sm text-white/60' : 'mt-1 text-sm text-[#666]'}>
+                {isLoading
+                  ? 'Loading b-roll…'
+                  : `${filtered.length.toLocaleString()} results matching your criteria`}
+              </p>
+            </div>
+            <BrollFiltersToggle
+              open={filtersOpen}
+              onOpenChange={setFiltersOpen}
               activeCount={activeFilterCount}
               themeMode={themeMode}
             />
+          </div>
+
+          <BrollFiltersPanel
+            open={filtersOpen}
+            value={appliedFilters}
+            onApply={setAppliedFilters}
+            activeCount={activeFilterCount}
+            themeMode={themeMode}
+          />
+
+          {isLoading ? (
+            <BrollGridSkeleton themeMode={themeMode} />
+          ) : filtered.length === 0 ? (
             <div
               className={[
                 'rounded-lg border p-10 text-center shadow-sm',
@@ -649,50 +673,24 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
                 Try a different search term or filter.
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="flex flex-wrap items-end justify-between gap-3 pb-1">
-              <div>
-                <h2
-                  className={[
-                    'text-2xl font-semibold tracking-tight sm:text-3xl',
-                    isDarkTheme ? 'text-white' : 'text-[#111]',
-                  ].join(' ')}
-                >
-                  Recently Added
-                </h2>
-                <p className={isDarkTheme ? 'mt-1 text-sm text-white/60' : 'mt-1 text-sm text-[#666]'}>
-                  {filtered.length.toLocaleString()} results matching your criteria
-                </p>
-              </div>
+          ) : (
+            <div className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              {pageItems.map((it) => (
+                <BrollCard
+                  key={it.id}
+                  item={it}
+                  downloading={downloadingKey === String(it.id)}
+                  onDownload={handleDownload}
+                  themeMode={themeMode}
+                />
+              ))}
             </div>
-
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-              <BrollFiltersPanel
-                value={appliedFilters}
-                onApply={setAppliedFilters}
-                activeCount={activeFilterCount}
-                themeMode={themeMode}
-              />
-
-              <div className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                {pageItems.map((it) => (
-                  <BrollCard
-                    key={it.id}
-                    item={it}
-                    downloading={downloadingKey === String(it.id)}
-                    onDownload={handleDownload}
-                    themeMode={themeMode}
-                  />
-                ))}
-              </div>
-            </div>
+          )}
 
             {/* FIX 9: Unified pagination — removed the redundant centred "Next page"
                 text button. Navigation is now exclusively handled by the icon buttons
                 and the page counter on the right, which is consistent and unambiguous. */}
-            {pageCount > 1 ? (
+            {!isLoading && filtered.length > 0 && pageCount > 1 ? (
               <div className="flex items-center justify-end gap-2">
                 <div className="hidden items-center gap-2 sm:flex">
                   <div className={isDarkTheme ? 'text-xs text-white/60' : 'text-xs text-[#666]'}>Per page</div>
@@ -750,8 +748,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
                 </Button>
               </div>
             ) : null}
-          </div>
-        )}
+        </div>
       </main>
 
       {/* ── Guest auth prompt ── */}
@@ -1051,7 +1048,8 @@ function DownloadButton({
       disabled={downloading}
       title={`Download "${title}"`}
       className={[
-        'cursor-spotlight relative isolate inline-flex cursor-pointer items-center gap-1.5 overflow-hidden rounded-full border border-white/10 bg-[#ef3340] px-3 py-1.5 text-[11px] font-semibold text-white shadow-lg shadow-black/20 backdrop-blur-sm transition-colors hover:bg-[#d92734] disabled:cursor-not-allowed disabled:opacity-70',
+        'cursor-spotlight relative isolate inline-flex cursor-pointer items-center gap-1.5 overflow-hidden rounded-full px-3 py-1.5 text-[11px] font-semibold shadow-lg shadow-black/20 disabled:cursor-not-allowed disabled:opacity-70',
+        GRADIENT_BTN,
         active && 'is-spotlight-active',
       ]
         .filter(Boolean)
