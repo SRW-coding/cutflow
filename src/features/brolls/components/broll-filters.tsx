@@ -143,6 +143,7 @@ export function BrollFiltersPanel({
 
   const handleResetAll = () => {
     setDraft(EMPTY_BROLL_FILTERS);
+    onApply(EMPTY_BROLL_FILTERS);
   };
 
   const handleApply = () => {
