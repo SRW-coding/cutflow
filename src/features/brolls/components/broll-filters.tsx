@@ -19,8 +19,10 @@ import {
 import { cn } from '@/shared/ui/cn';
 import {
   BROLL_AGE_OPTIONS,
-  BROLL_GENDER_OPTIONS,
   BROLL_ETHNICITY_OPTIONS,
+  BROLL_GENDER_OPTIONS,
+  brollAgeBoundsFromRange,
+  brollAgeRangeFromBounds,
   countBrollFilters,
   EMPTY_BROLL_FILTERS,
   sameBrollFilters,

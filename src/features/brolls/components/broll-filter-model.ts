@@ -50,6 +50,34 @@ export const BROLL_ETHNICITY_OPTIONS: Array<{ value: BrollEthnicity; label: stri
   { value: 'british',   label: 'British' },
 ];
 
+/** Age range buckets for the age filter dropdown. */
+export const BROLL_AGE_RANGE_OPTIONS = [
+  { value: '18-24', label: '18-24', min: 18, max: 24 },
+  { value: '25-34', label: '25-34', min: 25, max: 34 },
+  { value: '35-44', label: '35-44', min: 35, max: 44 },
+  { value: '45-54', label: '45-54', min: 45, max: 54 },
+  { value: '55-64', label: '55-64', min: 55, max: 64 },
+] as const;
+
+export const BROLL_AGE_OPTIONS = BROLL_AGE_RANGE_OPTIONS.map(({ value, label }) => ({
+  value,
+  label,
+}));
+
+export function brollAgeRangeFromBounds(minAge: string, maxAge: string): string {
+  if (!minAge || !maxAge) return '';
+  const match = BROLL_AGE_RANGE_OPTIONS.find(
+    (range) => String(range.min) === minAge && String(range.max) === maxAge,
+  );
+  return match?.value ?? '';
+}
+
+export function brollAgeBoundsFromRange(rangeValue: string): { minAge: string; maxAge: string } {
+  const range = BROLL_AGE_RANGE_OPTIONS.find((entry) => entry.value === rangeValue);
+  if (!range) return { minAge: '', maxAge: '' };
+  return { minAge: String(range.min), maxAge: String(range.max) };
+}
+
 /** Country / region options for nationality matching against item metadata. */
 export const BROLL_NATIONALITY_OPTIONS: BrollNationalityOption[] = [
   { value: 'united-states', label: 'United States', terms: ['usa', 'us', 'american', 'america'] },
@@ -117,8 +145,7 @@ export function countBrollFilters(filters: BrollFilterValues): number {
   return (
     (filters.gender ? 1 : 0) +
     (filters.ethnicity ? 1 : 0) +
-    (filters.minAge || filters.maxAge ? 1 : 0) +
-    (filters.nationalities.length > 0 ? 1 : 0)
+    (filters.minAge || filters.maxAge ? 1 : 0)
   );
 }
 
