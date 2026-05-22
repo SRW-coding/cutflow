@@ -692,6 +692,28 @@
     background-color: transparent !important;
   }
 
+  /* B-roll filter selects — open downward, max 5 visible rows then scroll */
+  .broll-filter-select-content {
+    overflow: hidden;
+  }
+
+  .broll-filter-select-content [data-radix-select-viewport] {
+    max-height: calc(var(--broll-filter-select-max-rows, 5) * 2.25rem);
+    height: auto !important;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgb(253 139 12 / 0.45) transparent;
+  }
+
+  .broll-filter-select-content [data-radix-select-viewport]::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .broll-filter-select-content [data-radix-select-viewport]::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: rgb(253 139 12 / 0.45);
+  }
+
   /* Radix filter dropdown items — peach highlight + orange dot (replaces check icon) */
   .broll-filter-select-item svg {
     display: none;

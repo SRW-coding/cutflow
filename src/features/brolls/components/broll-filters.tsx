@@ -1,9 +1,8 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import {
   Calendar,
   ChevronDown,
   Filter,
-  Globe,
   RotateCcw,
   User,
   Users,
@@ -16,9 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
+// import { Slider } from '@/components/ui/slider';
 import { cn } from '@/shared/ui/cn';
 import {
+  BROLL_AGE_OPTIONS,
   BROLL_GENDER_OPTIONS,
   BROLL_ETHNICITY_OPTIONS,
   countBrollFilters,
@@ -26,13 +26,11 @@ import {
   sameBrollFilters,
   type BrollFilterValues,
 } from '@/features/brolls/components/broll-filter-model';
-import { BrollNationalitySelect2 } from '@/features/brolls/components/broll-nationality-select2';
 
-const AGE_MIN = 0;
-const AGE_MAX = 100;
 const ANY_VALUE = '__any__';
 const BROLL_GRADIENT = 'from-[#fb0302] via-[#fd8b0c] to-[#fee51b]';
 const FILTER_FIELD_H = 'h-9';
+const BROLL_FILTER_SELECT_MAX_VISIBLE = 5;
 const filterSelectItemClass = (isDark: boolean) =>
   cn(
     'broll-filter-select-item rounded-md py-1.5 pl-2.5 pr-7 text-[13px]',
@@ -42,6 +40,10 @@ const filterSelectItemClass = (isDark: boolean) =>
   );
 export const GRADIENT_BTN =
   'broll-gradient-btn text-white shadow-[0_12px_26px_rgba(0,0,0,0.22)] transition-[filter] hover:brightness-95 active:brightness-90';
+
+function draftAgeSelectValue(draft: BrollFilterValues): string {
+  return brollAgeRangeFromBounds(draft.minAge, draft.maxAge);
+}
 
 type BrollFiltersToggleProps = {
   open: boolean;
@@ -119,29 +121,35 @@ export function BrollFiltersPanel({
     setDraft(value);
   }, [value]);
 
-  const minAge = draft.minAge ? Number(draft.minAge) : null;
-  const maxAge = draft.maxAge ? Number(draft.maxAge) : null;
-  const ageError = minAge !== null && maxAge !== null && minAge > maxAge;
-  const ageRange: [number, number] = [minAge ?? AGE_MIN, maxAge ?? AGE_MAX];
+  // --- Age slider (commented out — replaced by age range dropdown) ---
+  // const minAge = draft.minAge ? Number(draft.minAge) : null;
+  // const maxAge = draft.maxAge ? Number(draft.maxAge) : null;
+  // const ageError = minAge !== null && maxAge !== null && minAge > maxAge;
+  // const ageRange: [number, number] = [minAge ?? AGE_MIN, maxAge ?? AGE_MAX];
+  // const setAgeRange = ([nextMin, nextMax]: number[]) => {
+  //   setDraft((current) => ({
+  //     ...current,
+  //     minAge: nextMin <= AGE_MIN ? '' : String(nextMin),
+  //     maxAge: nextMax >= AGE_MAX ? '' : String(nextMax),
+  //   }));
+  // };
+
+  const selectedAge = draftAgeSelectValue(draft);
 
   const draftActiveCount = countBrollFilters(draft);
   const draftHasFilters = draftActiveCount > 0;
-
-  const setAgeRange = ([nextMin, nextMax]: number[]) => {
-    setDraft((current) => ({
-      ...current,
-      minAge: nextMin <= AGE_MIN ? '' : String(nextMin),
-      maxAge: nextMax >= AGE_MAX ? '' : String(nextMax),
-    }));
-  };
 
   const handleResetAll = () => {
     setDraft(EMPTY_BROLL_FILTERS);
   };
 
   const handleApply = () => {
-    if (ageError) return;
     onApply(draft);
+  };
+
+  const setAgeFromDropdown = (rangeValue: string) => {
+    const { minAge, maxAge } = brollAgeBoundsFromRange(rangeValue);
+    setDraft((current) => ({ ...current, minAge, maxAge }));
   };
 
   return (
@@ -161,7 +169,19 @@ export function BrollFiltersPanel({
           )}
           aria-label="B-roll filters"
         >
-          <div className="grid grid-cols-1 gap-5 p-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-5 p-4 sm:grid-cols-2 lg:grid-cols-3">
+            <BrollFilterDropdown
+              label="Age"
+              icon={Calendar}
+              value={selectedAge}
+              placeholder="Any"
+              options={BROLL_AGE_OPTIONS}
+              onChange={setAgeFromDropdown}
+              isDark={isDark}
+            />
+
+            {/* Age bounds slider (commented out — use age dropdown above) */}
+            {/*
             <FilterColumn
               label="Age bounds"
               icon={Calendar}
@@ -190,6 +210,7 @@ export function BrollFiltersPanel({
                 </p>
               ) : null}
             </FilterColumn>
+            */}
 
             <BrollFilterDropdown
               label="Ethnicity"
@@ -200,35 +221,6 @@ export function BrollFiltersPanel({
               onChange={(ethnicity) => setDraft((c) => ({ ...c, ethnicity: ethnicity as BrollFilterValues['ethnicity'] }))}
               isDark={isDark}
             />
-
-            <FilterColumn label="Nationality" isDark={isDark}>
-              <GradientBorder isDark={isDark}>
-                <div
-                  className={cn(
-                    'flex w-full items-center gap-2 px-2.5',
-                    FILTER_FIELD_H,
-                    isDark ? 'bg-[#0c0c0c] text-white' : 'bg-white text-[#111]',
-                    draft.nationalities.length > 0 && 'text-[#fb0302]',
-                  )}
-                >
-                  <Globe
-                    className={cn(
-                      'h-3.5 w-3.5 shrink-0',
-                      draft.nationalities.length > 0 ? 'text-[#fb0302] opacity-100' : 'opacity-70',
-                    )}
-                    aria-hidden
-                  />
-                  <BrollNationalitySelect2
-                    value={draft.nationalities}
-                    onChange={(nationalities) => setDraft((c) => ({ ...c, nationalities }))}
-                    isDark={isDark}
-                    className="broll-nationality-select2--inline min-w-0 flex-1"
-                    hasSelection={draft.nationalities.length > 0}
-                  />
-                  <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-50 pointer-events-none" aria-hidden />
-                </div>
-              </GradientBorder>
-            </FilterColumn>
 
             <BrollFilterDropdown
               label="Gender"
@@ -287,7 +279,7 @@ export function BrollFiltersPanel({
               <Button
                 type="button"
                 onClick={handleApply}
-                disabled={ageError || sameBrollFilters(value, draft)}
+                disabled={sameBrollFilters(value, draft)}
                 className={cn('h-9 px-6', GRADIENT_BTN)}
               >
                 Apply filters
@@ -397,12 +389,22 @@ function BrollFilterDropdown<T extends string>({
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>
           <SelectContent
+            position="popper"
+            side="bottom"
+            align="start"
+            sideOffset={4}
+            avoidCollisions={false}
             className={cn(
               'broll-filter-select-content min-w-[var(--radix-select-trigger-width)] p-1',
               isDark
                 ? 'border-white/15 bg-[#151515] text-white'
                 : 'border-[#e5e5e5] bg-white text-[#111] shadow-md',
             )}
+            style={
+              {
+                '--broll-filter-select-max-rows': BROLL_FILTER_SELECT_MAX_VISIBLE,
+              } as CSSProperties
+            }
           >
             <SelectItem value={ANY_VALUE} className={filterSelectItemClass(isDark)}>
               {placeholder}

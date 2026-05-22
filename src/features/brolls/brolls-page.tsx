@@ -185,7 +185,7 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
   const [searchKind, setSearchKind] = useState<'videos'>('videos');
   const [appliedFilters, setAppliedFilters] =
     useState<BrollFilterValues>(EMPTY_BROLL_FILTERS);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const activeFilterCount = useMemo(() => countBrollFilters(appliedFilters), [appliedFilters]);
 
   // Seed state from the persisted cache so repeat visits paint instantly
