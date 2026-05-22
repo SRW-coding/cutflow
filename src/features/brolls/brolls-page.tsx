@@ -429,13 +429,13 @@ export function BrollsPage({ fixedProjectId }: { fixedProjectId?: string }) {
       <header className="broll-navbar cutflow-top-nav sticky top-0 z-50 border-b border-white/10 text-white">
         <div className="mx-auto flex max-w-[1400px] items-center gap-2 px-2 py-3 sm:gap-4 sm:px-4 sm:py-4 lg:px-6">
           <div className="flex items-center gap-4 min-w-0">
-            <Link to="/" className="shrink-0">
+            <a href="/" className="shrink-0" aria-label="Reload site">
               <FreeCutLogo
                 variant="full"
                 size="md"
                 className="hover:opacity-80 transition-opacity"
               />
-            </Link>
+            </a>
             <div className="min-w-0">
               <p className="truncate text-sm font-bold leading-none tracking-tight sm:text-[15px]">
                 <span className="text-white">Cutflow</span>

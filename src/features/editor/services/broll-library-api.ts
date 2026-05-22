@@ -14,7 +14,6 @@ export interface BrollLibraryItem {
   gender?: string | null;
   ethnicity?: string | null;
   age?: number | null;
-  nationality?: string | null;
 }
 
 export interface BrollSubcategory {
@@ -121,10 +120,6 @@ export function getCachedBrollLibrary(): BrollCategory[] | null {
 
 function hasServerFilters(filters?: BrollFilterValues): boolean {
   if (!filters) return false;
-  // Nationality is NOT sent to the server: the frontend's nationality list uses
-  // country slugs (e.g. "united-states", "united-kingdom") that don't match the
-  // backend's lowercase codes (e.g. "american", "british"). The fuzzy
-  // term-based match in matchesBrollFilters handles nationality client-side.
   return Boolean(filters.gender || filters.ethnicity || filters.minAge || filters.maxAge);
 }
 

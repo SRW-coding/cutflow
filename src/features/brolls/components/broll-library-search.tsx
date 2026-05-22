@@ -1,5 +1,5 @@
 import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { Search } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -256,9 +256,25 @@ function BrollSearchBar({
             barHeight,
             'w-full rounded-none border-0 shadow-none focus-visible:ring-0',
             inputPad,
+            query ? 'pr-9' : '',
             isDark ? 'bg-[#151515] text-white placeholder:text-white/45' : 'bg-white text-[#111] placeholder:text-[#777]',
           )}
         />
+        {query ? (
+          <button
+            type="button"
+            onClick={() => onQueryChange('')}
+            aria-label="Clear search"
+            className={cn(
+              'absolute right-2 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-full transition-colors',
+              isDark
+                ? 'text-white/60 hover:bg-white/10 hover:text-white'
+                : 'text-[#888] hover:bg-[#f0f0f0] hover:text-[#111]',
+            )}
+          >
+            <X className="h-3.5 w-3.5" strokeWidth={2.5} />
+          </button>
+        ) : null}
       </div>
       <Button
         type="button"
